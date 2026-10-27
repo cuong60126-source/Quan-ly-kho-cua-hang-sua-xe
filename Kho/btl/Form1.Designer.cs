@@ -61,6 +61,7 @@
 			txtTenPhuTung = new TextBox();
 			label6 = new Label();
 			cbMaPhuTung = new ComboBox();
+			btnMoiPhuTung = new Button();
 			label5 = new Label();
 			dgvPhuTung = new DataGridView();
 			panel2 = new Panel();
@@ -223,6 +224,7 @@
 			groupBox2.Controls.Add(txtTenPhuTung);
 			groupBox2.Controls.Add(label6);
 			groupBox2.Controls.Add(cbMaPhuTung);
+			groupBox2.Controls.Add(btnMoiPhuTung);
 			groupBox2.Controls.Add(label5);
 			groupBox2.Dock = DockStyle.Top;
 			groupBox2.Location = new Point(0, 0);
@@ -402,9 +404,19 @@
 			cbMaPhuTung.FormattingEnabled = true;
 			cbMaPhuTung.Location = new Point(149, 49);
 			cbMaPhuTung.Name = "cbMaPhuTung";
-			cbMaPhuTung.Size = new Size(246, 28);
+			cbMaPhuTung.Size = new Size(186, 28);
 			cbMaPhuTung.TabIndex = 1;
-			// 
+			//
+			// btnMoiPhuTung
+			//
+			btnMoiPhuTung.Location = new Point(339, 48);
+			btnMoiPhuTung.Name = "btnMoiPhuTung";
+			btnMoiPhuTung.Size = new Size(56, 30);
+			btnMoiPhuTung.TabIndex = 2;
+			btnMoiPhuTung.Text = "Mới";
+			btnMoiPhuTung.UseVisualStyleBackColor = true;
+			btnMoiPhuTung.Click += btnMoiPhuTung_Click;
+			//
 			// label5
 			// 
 			label5.AutoSize = true;
@@ -607,6 +619,7 @@
 		private TextBox txtTenPhuTung;
 		private Label label6;
 		private ComboBox cbMaPhuTung;
+		private Button btnMoiPhuTung;
 		private Label label5;
 		private Button btnLamMoiPhuTung;
 		private Button btnHuyPhuTung;

@@ -121,7 +121,6 @@ BEGIN TRY
     CREATE TABLE dbo.PhuTung (
         MaPhuTung VARCHAR(10) NOT NULL PRIMARY KEY,
         TenPhuTung NVARCHAR(100) NOT NULL,
-        DonViTinh NVARCHAR(20) NOT NULL,
         MaNCC VARCHAR(10) NOT NULL,
         HanSuDung DATE NOT NULL,
         DonGiaNhap DECIMAL(18,2) NOT NULL DEFAULT 0,
@@ -426,21 +425,21 @@ BEGIN TRY
 
     -- Tồn kho đã trừ các phụ tùng dùng cho ba phiếu hoàn thành.
     INSERT INTO dbo.PhuTung (
-        MaPhuTung, TenPhuTung, DonViTinh, MaNCC, HanSuDung,
+        MaPhuTung, TenPhuTung, MaNCC, HanSuDung,
         DonGiaNhap, DonGiaBan, SoLuongTon, TrangThai
     )
     VALUES
-        ('PT001', N'Dầu nhớt 0,8 lít', N'Chai', 'NCC001', '20281001',
+        ('PT001', N'Dầu nhớt 0,8 lít', 'NCC001', '20281001',
          80000, 100000, 0, 1),
-        ('PT002', N'Bugi xe máy', N'Cái', 'NCC002', '99991231',
+        ('PT002', N'Bugi xe máy', 'NCC002', '99991231',
          25000, 40000, 0, 1),
-        ('PT003', N'Má phanh trước', N'Bộ', 'NCC002', '99991231',
+        ('PT003', N'Má phanh trước', 'NCC002', '99991231',
          60000, 90000, 0, 1),
-        ('PT004', N'Lọc gió xe tay ga', N'Cái', 'NCC002', '99991231',
+        ('PT004', N'Lọc gió xe tay ga', 'NCC002', '99991231',
          35000, 50000, 0, 1),
-        ('PT005', N'Ắc quy xe máy 12V', N'Bình', 'NCC003', '20281010',
+        ('PT005', N'Ắc quy xe máy 12V', 'NCC003', '20281010',
          280000, 350000, 0, 1),
-        ('PT006', N'Dây curoa xe tay ga', N'Sợi', 'NCC002', '99991231',
+        ('PT006', N'Dây curoa xe tay ga', 'NCC002', '99991231',
          150000, 200000, 0, 1);
 
     -- Đơn giá dịch vụ chỉ là tiền công, chưa gồm phụ tùng.

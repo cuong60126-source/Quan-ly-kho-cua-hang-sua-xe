@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Data;
 using System.Linq;
 
@@ -31,13 +32,32 @@ namespace btl
 
 			if(dataCheck.Rows.Count > 0)
 			{
-				string sqlDgvPhuTung = "Select pn.MaPhieuNhap, ncc.TenNCC, pn.NgayNhap, pt.MaPhuTung, pt.TenPhuTung, ct.SoLuong As SoLuongNhap, ct.DonGiaNhap, pt.DonGiaBan, ct.ThanhTien, ct.HanSuDung, pn.MaNhanVienNhap, pn.GhiChu " +
+				// MaNCC và HanSuDung nằm ở bảng PhuTung, không phải ChiTietPhieuNhap
+				string sqlDgvPhuTung = "Select pn.MaPhieuNhap, ncc.TenNCC, pn.NgayNhap, pt.MaPhuTung, pt.TenPhuTung, ct.SoLuong As SoLuongNhap, ct.DonGiaNhap, pt.DonGiaBan, ct.ThanhTien, pt.HanSuDung, pn.MaNhanVienNhap, pn.GhiChu " +
 					"From PhuTung pt Join ChiTietPhieuNhap ct On pt.MaPhuTung = ct.MaPhuTung " +
 					"Join PhieuNhap pn On pn.MaPhieuNhap = ct.MaPhieuNhap " +
-					"Join NhaCungCap ncc On ct.MaNCC = ncc.MaNCC " +
-					"Where pn.MaPhieuNhap = '" + maPhieuNhap + "'";
+					"Join NhaCungCap ncc On pt.MaNCC = ncc.MaNCC " +
+					"Where pn.MaPhieuNhap = '" + maPhieuNhap + "' " +
+					"Order By ct.MaChiTietPhieuNhap";
 
-				dgvPhuTung.DataSource = dtbase.ReadData(sqlDgvPhuTung);
+				// Thêm từng dòng thay vì gán DataSource, để nút Thêm phụ tùng (Rows.Add) vẫn dùng được
+				foreach (DataRow data in dtbase.ReadData(sqlDgvPhuTung).Rows)
+				{
+					dgvPhuTung.Rows.Add(
+						data["MaPhieuNhap"],
+						data["TenNCC"],
+						data["NgayNhap"],
+						data["MaPhuTung"],
+						data["TenPhuTung"],
+						data["SoLuongNhap"],
+						Convert.ToDecimal(data["DonGiaNhap"]).ToString("0.##"),
+						Convert.ToDecimal(data["DonGiaBan"]).ToString("0.##"),
+						Convert.ToDecimal(data["ThanhTien"]).ToString("0.##"),
+						data["HanSuDung"],
+						data["MaNhanVienNhap"],
+						data["GhiChu"]
+						);
+				}
 			}
 		}
 
@@ -114,6 +134,39 @@ namespace btl
 				function.AddComboBox(cbNhaCungCap, dtbase.ReadData("Select TenNCC, MaNCC From NhaCungCap"), "TenNCC", "MaNCC");
 				cbNhaCungCap.SelectedIndex = -1;
 			}
+		}
+
+		private string GenerateMaPhuTung()
+		{
+			string sql = "Select Max(Try_Cast(Substring(MaPhuTung, 3, Len(MaPhuTung)) As int)) From PhuTung Where MaPhuTung Like 'PT%'";
+
+			DataTable data = dtbase.ReadData(sql);
+
+			int so = 0;
+			if (data.Rows.Count > 0 && data.Rows[0][0] != DBNull.Value)
+			{
+				so = Convert.ToInt32(data.Rows[0][0]);
+			}
+
+			// Mã mới trên lưới chưa được lưu vào database nên phải xét thêm
+			foreach (DataGridViewRow row in dgvPhuTung.Rows)
+			{
+				string maPhuTung = row.Cells["colMaPhuTung"].Value?.ToString() ?? "";
+				if (maPhuTung.StartsWith("PT") && int.TryParse(maPhuTung.Substring(2), out int soTrenLuoi) && soTrenLuoi > so)
+				{
+					so = soTrenLuoi;
+				}
+			}
+
+			return "PT" + (so + 1).ToString("D3");
+		}
+
+		private void btnMoiPhuTung_Click(object sender, EventArgs e)
+		{
+			cbMaPhuTung.SelectedIndex = -1;
+			cbMaPhuTung.Text = GenerateMaPhuTung();
+			txtTenPhuTung.Clear();
+			txtTenPhuTung.Focus();
 		}
 
 		private void btnThemPhuTung_Click(object sender, EventArgs e)
@@ -311,6 +364,12 @@ namespace btl
 			txtThanhTien.Clear();
 		}
 
+		// Escape dấu ' để tên/ghi chú có dấu nháy không làm hỏng câu SQL
+		private string EscapeSql(object? value)
+		{
+			return (value?.ToString() ?? "").Replace("'", "''");
+		}
+
 		private void btnLuuPhieu_Click(object sender, EventArgs e)
 		{
 			var rows = dgvPhuTung.Rows.Cast<DataGridViewRow>().Where(row => !row.IsNewRow).ToList();
@@ -321,10 +380,16 @@ namespace btl
 				return;
 			}
 
-			string maNVCheck = txtMaNVNhap.Text.Trim();
+			string maPhieuNhap = txtMaPhieuNhap.Text.Trim();
+			DateTime ngayNhap = Convert.ToDateTime(rows[0].Cells["colNgayNhap"].Value);
+			string ngayNhapSql = ngayNhap.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
+			string maNV = rows[0].Cells["colMaNhanVienNhap"].Value?.ToString()?.Trim() ?? "";
+			string ghiChu = rows[0].Cells["colGhiChu"].Value?.ToString() ?? "";
+
+			// Kiểm tra mã NV trên lưới, vì txtMaNVNhap bị xóa trắng sau mỗi lần thêm phụ tùng
 			string sqlNhanVien = "Select * " +
 				"From NhanVien " +
-				"Where MaNhanVien = '" + maNVCheck + "'";
+				"Where MaNhanVien = '" + EscapeSql(maNV) + "'";
 			DataTable dataNhanVien = dtbase.ReadData(sqlNhanVien);
 
 			if (dataNhanVien.Rows.Count == 0)
@@ -334,106 +399,211 @@ namespace btl
 				return;
 			}
 
+			List<string> phuTungMoi = new List<string>();
+			for (int i = 0; i < rows.Count; i++)
+			{
+				DataGridViewRow row = rows[i];
+				int soLuongNhap = Convert.ToInt32(row.Cells["colSoLuongNhap"].Value);
+				decimal donGiaNhap = Convert.ToDecimal(row.Cells["colDonGiaNhap"].Value);
+				decimal donGiaBan = Convert.ToDecimal(row.Cells["colDonGiaBan"].Value);
+				DateTime hanSuDung = Convert.ToDateTime(row.Cells["colHanSuDung"].Value);
+
+				phuTungMoi.Add("(" +
+					(i + 1) + ", " +
+					"'" + EscapeSql(row.Cells["colMaPhuTung"].Value) + "', " +
+					"N'" + EscapeSql(row.Cells["colTenPhuTung"].Value) + "', " +
+					"N'" + EscapeSql(row.Cells["colTenNCC"].Value) + "', " +
+					"'" + hanSuDung.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + "', " +
+					soLuongNhap + ", " +
+					donGiaNhap.ToString(CultureInfo.InvariantCulture) + ", " +
+					donGiaBan.ToString(CultureInfo.InvariantCulture) +
+					")");
+			}
+
+			// Cả phiếu được lưu trong 1 transaction: lỗi ở bất kỳ bước nào thì không lưu gì cả.
+			// Dùng chung cho thêm mới và sửa phiếu: phiếu mới thì "số lượng cũ" = 0.
+			string sqlLuuPhieu = $"""
+				SET XACT_ABORT ON;
+
+				BEGIN TRY
+				    BEGIN TRANSACTION;
+
+				    DECLARE @MaPhieuNhap VARCHAR(10) = '{EscapeSql(maPhieuNhap)}';
+				    DECLARE @Loi NVARCHAR(400);
+
+				    -- Các dòng phụ tùng trên lưới
+				    DECLARE @Moi TABLE (
+				        STT INT NOT NULL,
+				        MaPhuTung VARCHAR(10) NOT NULL,
+				        TenPhuTung NVARCHAR(100) NOT NULL,
+				        TenNCC NVARCHAR(100) NOT NULL,
+				        HanSuDung DATE NOT NULL,
+				        SoLuong INT NOT NULL,
+				        DonGiaNhap DECIMAL(18,2) NOT NULL,
+				        DonGiaBan DECIMAL(18,2) NOT NULL
+				    );
+
+				    INSERT INTO @Moi (STT, MaPhuTung, TenPhuTung, TenNCC, HanSuDung, SoLuong, DonGiaNhap, DonGiaBan)
+				    VALUES
+				        {string.Join(",\n        ", phuTungMoi)};
+
+				    -- Số lượng cũ (đang lưu trong database) và mới (trên lưới) của từng phụ tùng
+				    DECLARE @ChenhLech TABLE (
+				        MaPhuTung VARCHAR(10) NOT NULL PRIMARY KEY,
+				        SoLuongCu INT NOT NULL,
+				        SoLuongMoi INT NOT NULL
+				    );
+
+				    INSERT INTO @ChenhLech (MaPhuTung, SoLuongCu, SoLuongMoi)
+				    SELECT X.MaPhuTung, SUM(X.SoLuongCu), SUM(X.SoLuongMoi)
+				    FROM
+				    (
+				        SELECT CT.MaPhuTung, CT.SoLuong AS SoLuongCu, 0 AS SoLuongMoi
+				        FROM dbo.ChiTietPhieuNhap CT
+				        WHERE CT.MaPhieuNhap = @MaPhieuNhap
+
+				        UNION ALL
+
+				        SELECT M.MaPhuTung, 0, M.SoLuong
+				        FROM @Moi M
+				    ) X
+				    GROUP BY X.MaPhuTung;
+
+				    -- 1. Không cho sửa số lượng phụ tùng đã dùng trong dịch vụ (đã có trong phiếu tiếp nhận)
+				    SELECT TOP 1 @Loi = N'Phụ tùng ' + CL.MaPhuTung + N' đã được dùng trong dịch vụ, không thể sửa số lượng!'
+				    FROM @ChenhLech CL
+				    WHERE CL.SoLuongCu > 0
+				      AND CL.SoLuongCu <> CL.SoLuongMoi
+				      AND EXISTS
+				      (
+				          SELECT 1
+				          FROM dbo.ChiTietPhieuTiepNhan CTTN
+				          JOIN dbo.DichVu DV ON DV.MaDichVu = CTTN.MaDichVu
+				          WHERE DV.MaPhuTung = CL.MaPhuTung
+				      );
+
+				    IF @Loi IS NOT NULL
+				        THROW 50001, @Loi, 1;
+
+				    -- 2. Không cho số lượng tồn bị âm khi giảm số lượng nhập
+				    SELECT TOP 1 @Loi = N'Số lượng tồn của phụ tùng ' + PT.MaPhuTung + N' không đủ để giảm!'
+				    FROM dbo.PhuTung PT
+				    JOIN @ChenhLech CL ON CL.MaPhuTung = PT.MaPhuTung
+				    WHERE PT.SoLuongTon + CL.SoLuongMoi - CL.SoLuongCu < 0;
+
+				    IF @Loi IS NOT NULL
+				        THROW 50002, @Loi, 1;
+
+				    -- 3. Nhà cung cấp phải tồn tại
+				    SELECT TOP 1 @Loi = N'Không tìm thấy nhà cung cấp ' + M.TenNCC + N'!'
+				    FROM @Moi M
+				    WHERE NOT EXISTS (SELECT 1 FROM dbo.NhaCungCap NCC WHERE NCC.TenNCC = M.TenNCC);
+
+				    IF @Loi IS NOT NULL
+				        THROW 50003, @Loi, 1;
+
+				    -- 4. Phiếu nhập: sửa nếu đã có, thêm nếu chưa có
+				    IF EXISTS (SELECT 1 FROM dbo.PhieuNhap WHERE MaPhieuNhap = @MaPhieuNhap)
+				        UPDATE dbo.PhieuNhap
+				        SET NgayNhap = '{ngayNhapSql}',
+				            MaNhanVienNhap = '{EscapeSql(maNV)}',
+				            GhiChu = N'{EscapeSql(ghiChu)}'
+				        WHERE MaPhieuNhap = @MaPhieuNhap;
+				    ELSE
+				        INSERT INTO dbo.PhieuNhap (MaPhieuNhap, NgayNhap, MaNhanVienNhap, GhiChu)
+				        VALUES (@MaPhieuNhap, '{ngayNhapSql}', '{EscapeSql(maNV)}', N'{EscapeSql(ghiChu)}');
+
+				    -- 5. Phụ tùng chưa có thì tạo mới từ phiếu nhập (tồn = 0, cộng ở bước 6)
+				    INSERT INTO dbo.PhuTung (MaPhuTung, TenPhuTung, MaNCC, HanSuDung, DonGiaNhap, DonGiaBan, SoLuongTon)
+				    SELECT M.MaPhuTung, M.TenPhuTung, NCC.MaNCC, M.HanSuDung, M.DonGiaNhap, M.DonGiaBan, 0
+				    FROM @Moi M
+				    CROSS APPLY
+				    (
+				        SELECT TOP 1 N.MaNCC
+				        FROM dbo.NhaCungCap N
+				        WHERE N.TenNCC = M.TenNCC
+				    ) NCC
+				    WHERE M.STT = (SELECT MIN(M2.STT) FROM @Moi M2 WHERE M2.MaPhuTung = M.MaPhuTung)
+				      AND NOT EXISTS (SELECT 1 FROM dbo.PhuTung PT WHERE PT.MaPhuTung = M.MaPhuTung);
+
+				    -- 6. Cập nhật số lượng tồn theo chênh lệch mới - cũ
+				    UPDATE PT
+				    SET PT.SoLuongTon = PT.SoLuongTon + CL.SoLuongMoi - CL.SoLuongCu
+				    FROM dbo.PhuTung PT
+				    JOIN @ChenhLech CL ON CL.MaPhuTung = PT.MaPhuTung;
+
+				    -- 7. Phụ tùng chỉ thuộc phiếu này thì cập nhật thông tin theo lưới
+				    UPDATE PT
+				    SET PT.TenPhuTung = M.TenPhuTung,
+				        PT.MaNCC = NCC.MaNCC,
+				        PT.HanSuDung = M.HanSuDung,
+				        PT.DonGiaNhap = M.DonGiaNhap,
+				        PT.DonGiaBan = M.DonGiaBan
+				    FROM dbo.PhuTung PT
+				    JOIN @Moi M ON M.MaPhuTung = PT.MaPhuTung
+				    CROSS APPLY
+				    (
+				        SELECT TOP 1 N.MaNCC
+				        FROM dbo.NhaCungCap N
+				        WHERE N.TenNCC = M.TenNCC
+				    ) NCC
+				    WHERE M.STT = (SELECT MAX(M2.STT) FROM @Moi M2 WHERE M2.MaPhuTung = M.MaPhuTung)
+				      AND NOT EXISTS
+				      (
+				          SELECT 1
+				          FROM dbo.ChiTietPhieuNhap CT
+				          WHERE CT.MaPhuTung = PT.MaPhuTung
+				            AND CT.MaPhieuNhap <> @MaPhieuNhap
+				      );
+
+				    -- 8. Ghi lại chi tiết phiếu nhập
+				    DELETE FROM dbo.ChiTietPhieuNhap
+				    WHERE MaPhieuNhap = @MaPhieuNhap;
+
+				    INSERT INTO dbo.ChiTietPhieuNhap (MaPhieuNhap, MaPhuTung, SoLuong, DonGiaNhap)
+				    SELECT @MaPhieuNhap, M.MaPhuTung, M.SoLuong, M.DonGiaNhap
+				    FROM @Moi M
+				    ORDER BY M.STT;
+
+				    -- 9. Phụ tùng bị bỏ khỏi phiếu, không còn phiếu nhập/dịch vụ nào dùng và hết tồn thì xóa
+				    DELETE PT
+				    FROM dbo.PhuTung PT
+				    JOIN @ChenhLech CL ON CL.MaPhuTung = PT.MaPhuTung
+				    WHERE CL.SoLuongMoi = 0
+				      AND PT.SoLuongTon = 0
+				      AND NOT EXISTS (SELECT 1 FROM dbo.ChiTietPhieuNhap CT WHERE CT.MaPhuTung = PT.MaPhuTung)
+				      AND NOT EXISTS (SELECT 1 FROM dbo.DichVu DV WHERE DV.MaPhuTung = PT.MaPhuTung);
+
+				    -- 10. Tính lại tổng tiền phiếu nhập
+				    UPDATE PN
+				    SET PN.TongTien = ISNULL(Tong.TongTien, 0)
+				    FROM dbo.PhieuNhap PN
+				    OUTER APPLY
+				    (
+				        SELECT SUM(CT.ThanhTien) AS TongTien
+				        FROM dbo.ChiTietPhieuNhap CT
+				        WHERE CT.MaPhieuNhap = PN.MaPhieuNhap
+				    ) Tong
+				    WHERE PN.MaPhieuNhap = @MaPhieuNhap;
+
+				    COMMIT TRANSACTION;
+				END TRY
+				BEGIN CATCH
+				    IF @@TRANCOUNT > 0
+				        ROLLBACK TRANSACTION;
+
+				    THROW;
+				END CATCH;
+				""";
+
 			try
 			{
-				DataTable dataLuu = dtbase.ReadData("Select * From PhieuNhap Where MaPhieuNhap = '" + txtMaPhieuNhap.Text + "'");
-				if (dataLuu.Rows.Count > 0)
-				{
-					string maPhieuNhap = txtMaPhieuNhap.Text;
-					DateTime updateNgayNhap = Convert.ToDateTime(rows[0].Cells["colNgayNhap"].Value);
-					string updateMaNV = rows[0].Cells["colMaNhanVienNhap"].Value.ToString();
-					string updateGhiChu = rows[0].Cells["colGhiChu"].Value.ToString();
-
-					string sqlUpdatePhieuNhap = "Update PhieuNhap Set " +
-						"NgayNhap = '" + updateNgayNhap + "', " +
-						"MaNhanVienNhap = '" + updateMaNV + "', " +
-						"GhiChu = '" + updateGhiChu + "' " +
-						"Where MaPhieuNhap = '" + maPhieuNhap + "'";
-					string sqlDeleteChiTietPhieuNhap = "Delete From ChiTietPhieuNhap Where MaPhieuNhap = '" + txtMaPhieuNhap.Text + "'";
-					string sqlUpdateSoLuongPhuTung = "Update pt Set " +
-						"pt.SoLuongTon = pt.SoLuongTon - ct.SoLuong" +
-						"From PhuTung pt Join ChiTietPhieuNhap ct = pt.MaPhuTung = ct.MaPhuTung " +
-						"Where ct.MaPhieuNhap = '" + txtMaPhieuNhap.Text + "'";
-
-					dtbase.ChangeData(sqlUpdateSoLuongPhuTung);
-					dtbase.ChangeData(sqlUpdatePhieuNhap);
-					dtbase.ChangeData(sqlDeleteChiTietPhieuNhap);
-				}
-				else
-				{
-					string maPhieuNhap = txtMaPhieuNhap.Text;
-					DateTime ngayNhap = Convert.ToDateTime(rows[0].Cells["colNgayNhap"].Value);
-					string maNV = rows[0].Cells["colMaNhanVienNhap"].Value.ToString();
-					string ghiChu = rows[0].Cells["colGhiChu"].Value.ToString();
-
-					string sqlPhieuNhap = "Insert Into PhieuNhap (MaPhieuNhap, NgayNhap, MaNhanVienNhap, GhiChu) " +
-						"Values " +
-						"(" +
-						"'" + maPhieuNhap + "', " +
-						"'" + ngayNhap + "', " +
-						"'" + maNV + "', " +
-						"'" + ghiChu + "'" +
-						")";
-
-					dtbase.ChangeData(sqlPhieuNhap);
-				}
-
-				foreach (DataGridViewRow row in rows)
-				{
-					string maPhieuNhap = row.Cells["colMaphieuNhap"].Value.ToString();
-					string maPhuTung = row.Cells["colMaPhuTung"].Value.ToString();
-					string tenPhuTung = row.Cells["colTenPhuTung"].Value.ToString();
-					int soLuongNhap = Convert.ToInt32(row.Cells["colSoLuongNhap"].Value.ToString());
-					decimal donGiaNhap = Convert.ToDecimal(row.Cells["colDonGiaNhap"].Value.ToString());
-					decimal donGiaBan = Convert.ToDecimal(row.Cells["colDonGiaBan"].Value.ToString());
-					DateTime hanSuDung = Convert.ToDateTime(row.Cells["colHanSuDung"].Value);
-
-					string tenNCC = row.Cells["colTenNCC"].Value.ToString();
-					DataTable data = dtbase.ReadData("Select MaNCC From NhaCungCap Where TenNCC = N'" + tenNCC + "'");
-					string maNCC = data.Rows[0]["MaNCC"].ToString();
-
-					string sqlKiemTraPhuTung = "Select * From PhuTung Where MaPhuTung = '" + maPhuTung + "'";
-					if(dtbase.ReadData(sqlKiemTraPhuTung).Rows.Count > 0)
-					{
-						string sqlPhuTungUpdate = "Update PhuTung Set " +
-							"SoLuongTon = SoLuongTon + '" + soLuongNhap + "' " +
-							"Where MaPhuTung = '" + maPhuTung + "' " +
-							"And HanSuDung = '" + hanSuDung + "'";
-
-						dtbase.ChangeData(sqlPhuTungUpdate);
-					}
-					else
-					{
-						string sqlPhuTung = "Insert Into PhuTung (MaPhuTung, TenPhuTung, MaNCC, HanSuDung, DonGiaNhap, DonGiaBan, SoLuongTon) " +
-							"Values " +
-							"(" +
-							"'" + maPhuTung + "', " +
-							"'" + tenPhuTung + "', " +
-							"'" + maNCC + "', " +
-							"'" + hanSuDung + "', " +
-							"'" + donGiaNhap + "', " +
-							"'" + donGiaBan + "', " +
-							"'" + soLuongNhap + "'" +
-							")";
-
-						dtbase.ChangeData(sqlPhuTung);
-					}
-
-					string sqlChiTietPhieuNhap = "Insert Into ChiTietPhieuNhap (MaPhieuNhap, MaPhuTung, SoLuong, DonGiaNhap) Values" +
-						"(" +
-						"'" + maPhieuNhap + "', " +
-						"'" + maPhuTung + "', " +
-						"'" + soLuongNhap + "', " +
-						"'" + donGiaNhap + "'" +
-						")";
-
-					dtbase.ChangeData(sqlChiTietPhieuNhap);
-				}
+				dtbase.ChangeData(sqlLuuPhieu);
 
 				MessageBox.Show("Lưu phiếu nhập thành công!", "Thông báo");
 
-				ResetForm();
-				txtMaPhieuNhap.Clear();
+				this.DialogResult = DialogResult.OK;
+				this.Close();
 			}
 			catch (Exception ex)
 			{
