@@ -204,6 +204,11 @@ namespace btl
 				}
 			}
 
+			if (!KiemTraThongTinPhuTung())
+			{
+				return;
+			}
+
 			// Giá thị trường giảm thì được bán thấp hơn giá nhập, chỉ cảnh báo để tránh gõ nhầm
 			if (Convert.ToDecimal(txtDonGiaBan.Text) < Convert.ToDecimal(txtDonGiaNhap.Text))
 			{
@@ -268,6 +273,38 @@ namespace btl
 			btnXoaNCC.Enabled = true;
 		}
 
+		// Mã phụ tùng là duy nhất: mã đã có ở phiếu nhập khác thì NCC, tên, hạn sử dụng, giá nhập phải giống hệt, khác thì phải tạo mã mới
+		private bool KiemTraThongTinPhuTung()
+		{
+			string maPhuTung = cbMaPhuTung.Text.Trim();
+
+			string sqlPhuTung = "Select ncc.TenNhaCungCap, pt.TenPhuTung, pt.HanSuDung, pt.DonGiaNhap " +
+				"From PhuTung pt Join NhaCungCap ncc On pt.MaNhaCungCap = ncc.MaNhaCungCap " +
+				"Where pt.MaPhuTung = '" + EscapeSql(maPhuTung) + "' " +
+				"And Exists (Select 1 From ChiTietPhieuNhap ct Where ct.MaPhuTung = pt.MaPhuTung And ct.MaPhieuNhap <> '" + EscapeSql(txtMaPhieuNhap.Text.Trim()) + "')";
+
+			DataTable data = dtbase.ReadData(sqlPhuTung);
+
+			if (data.Rows.Count == 0)
+			{
+				return true;
+			}
+
+			DataRow phuTung = data.Rows[0];
+			decimal.TryParse(txtDonGiaNhap.Text, out decimal donGiaNhap);
+
+			if (phuTung["TenNhaCungCap"].ToString() != cbNhaCungCap.Text.Trim()
+				|| phuTung["TenPhuTung"].ToString() != txtTenPhuTung.Text.Trim()
+				|| Convert.ToDateTime(phuTung["HanSuDung"]).Date != dtpHanSuDung.Value.Date
+				|| Convert.ToDecimal(phuTung["DonGiaNhap"]) != donGiaNhap)
+			{
+				MessageBox.Show("Phụ tùng " + maPhuTung + " đã có với thông tin khác (nhà cung cấp, tên, hạn sử dụng hoặc giá nhập). Khác thông tin thì phải tạo mã phụ tùng mới!", "Thông báo");
+				return false;
+			}
+
+			return true;
+		}
+
 		// Chọn mã phụ tùng có sẵn trong danh sách thì tự điền thông tin đang lưu trong database
 		private void cbMaPhuTung_SelectionChangeCommitted(object sender, EventArgs e)
 		{
@@ -322,6 +359,11 @@ namespace btl
 		private void btnSuaPhuTung_Click(object sender, EventArgs e)
 		{
 			if (selectedRowIndex == -1)
+			{
+				return;
+			}
+
+			if (!KiemTraThongTinPhuTung())
 			{
 				return;
 			}
@@ -612,7 +654,9 @@ namespace btl
 				    WHERE CL.SoLuongMoi = 0
 				      AND PT.SoLuongTon = 0
 				      AND NOT EXISTS (SELECT 1 FROM dbo.ChiTietPhieuNhap CT WHERE CT.MaPhuTung = PT.MaPhuTung)
-				      AND NOT EXISTS (SELECT 1 FROM dbo.ChiTietDichVu CTDV WHERE CTDV.MaPhuTung = PT.MaPhuTung);
+				      AND NOT EXISTS (SELECT 1 FROM dbo.ChiTietDichVu CTDV WHERE CTDV.MaPhuTung = PT.MaPhuTung)
+				      AND NOT EXISTS (SELECT 1 FROM dbo.DieuChinhTonKho DC WHERE DC.MaPhuTung = PT.MaPhuTung)
+				      AND NOT EXISTS (SELECT 1 FROM dbo.DieuChinhGiaBan DG WHERE DG.MaPhuTung = PT.MaPhuTung);
 
 				    -- 10. Tính lại tổng tiền phiếu nhập
 				    UPDATE PN

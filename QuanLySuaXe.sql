@@ -183,6 +183,36 @@ CREATE TABLE ChiTietPhieuNhap (
     CONSTRAINT CK_CTPN_SoLuong CHECK (SoLuongNhap > 0 AND ThanhTien >= 0)
 );
 
+CREATE TABLE DieuChinhTonKho (   -- lịch sử điều chỉnh tồn khi không sửa/xóa được phiếu nhập
+    MaDieuChinh      VARCHAR(10)    NOT NULL,
+    MaPhuTung        VARCHAR(10)    NOT NULL,
+    MaNhanVien       VARCHAR(10)    NOT NULL,   -- người điều chỉnh
+    NgayDieuChinh    DATE           NOT NULL,
+    SoLuongCu        INT            NOT NULL,
+    SoLuongMoi       INT            NOT NULL,
+    DonGiaNhap       DECIMAL(18,0)  NOT NULL,   -- giá nhập tại thời điểm điều chỉnh
+    GiaTriChenhLech  AS ((SoLuongMoi - SoLuongCu) * DonGiaNhap) PERSISTED,
+    LyDo             NVARCHAR(255)  NOT NULL,
+    CONSTRAINT PK_DieuChinhTonKho PRIMARY KEY (MaDieuChinh),
+    CONSTRAINT FK_DCTK_PhuTung FOREIGN KEY (MaPhuTung) REFERENCES PhuTung(MaPhuTung),
+    CONSTRAINT FK_DCTK_NhanVien FOREIGN KEY (MaNhanVien) REFERENCES NhanVien(MaNhanVien),
+    CONSTRAINT CK_DCTK_SoLuong CHECK (SoLuongCu >= 0 AND SoLuongMoi >= 0 AND SoLuongMoi <> SoLuongCu)
+);
+
+CREATE TABLE DieuChinhGiaBan (   -- lịch sử điều chỉnh giá bán phụ tùng
+    MaDieuChinhGia   VARCHAR(10)    NOT NULL,
+    MaPhuTung        VARCHAR(10)    NOT NULL,
+    MaNhanVien       VARCHAR(10)    NOT NULL,   -- người điều chỉnh
+    NgayDieuChinh    DATE           NOT NULL,
+    GiaBanCu         DECIMAL(18,0)  NOT NULL,
+    GiaBanMoi        DECIMAL(18,0)  NOT NULL,
+    LyDo             NVARCHAR(255)  NOT NULL,
+    CONSTRAINT PK_DieuChinhGiaBan PRIMARY KEY (MaDieuChinhGia),
+    CONSTRAINT FK_DCGB_PhuTung FOREIGN KEY (MaPhuTung) REFERENCES PhuTung(MaPhuTung),
+    CONSTRAINT FK_DCGB_NhanVien FOREIGN KEY (MaNhanVien) REFERENCES NhanVien(MaNhanVien),
+    CONSTRAINT CK_DCGB_Gia CHECK (GiaBanCu > 0 AND GiaBanMoi > 0 AND GiaBanMoi <> GiaBanCu)
+);
+
 -- ---------- Tiếp nhận - Hóa đơn ----------
 CREATE TABLE PhieuTiepNhan (
     MaPhieuTiepNhan  VARCHAR(10)   NOT NULL,
@@ -4184,6 +4214,39 @@ INSERT INTO HoaDon (MaHoaDon, MaPhieuTiepNhan, TienThanhToan, NgayLap, NgayThanh
     ('HD104', 'PTN106', 735000, '2026-10-21', '2026-10-21'),
     ('HD105', 'PTN107', 445000, '2026-10-21', '2026-10-21'),
     ('HD106', 'PTN108', 520000, '2026-10-22', '2026-10-22');
+
+-- ---------- Dữ liệu demo kho: phiếu nhập sửa/xóa được, điều chỉnh tồn, điều chỉnh giá bán ----------
+-- PT031, PT032 (phiếu PN025): chưa vào dịch vụ, chưa điều chỉnh => sửa/xóa phiếu được
+-- PT033 (phiếu PN026): chưa vào dịch vụ nhưng đã điều chỉnh giá bán => sửa được, xóa bị chặn
+INSERT INTO PhuTung (MaPhuTung, MaNhaCungCap, TenPhuTung, DonGiaNhap, DonGiaBan, SoLuongTon, HanSuDung, TrangThai) VALUES
+    ('PT031', 'NCC01', N'Gương chiếu hậu Honda Vision (cặp)', 70000, 95000, 10, '2031-12-31', 1),
+    ('PT032', 'NCC01', N'Bóng đèn xi nhan LED 12V Honda', 25000, 40000, 20, '2031-12-31', 1),
+    ('PT033', 'NCC07', N'Bọc tay lái cao su Yamaha (cặp)', 30000, 50000, 15, '2031-12-31', 1);
+
+INSERT INTO PhieuNhap (MaPhieuNhap, MaNhanVienNhap, NgayNhap, GhiChu, TongTienNhap) VALUES
+    ('PN025', 'NV018', '2026-10-27', N'Nhập hàng bổ sung từ Công ty TNHH Phụ tùng Minh Phát', 1200000),
+    ('PN026', 'NV019', '2026-10-27', N'Nhập hàng bổ sung từ Đại lý Phụ tùng Ngọc Lan', 450000);
+
+INSERT INTO ChiTietPhieuNhap (MaPhieuNhap, MaPhuTung, SoLuongNhap, ThanhTien) VALUES
+    ('PN025', 'PT031', 10, 700000),
+    ('PN025', 'PT032', 20, 500000),
+    ('PN026', 'PT033', 15, 450000);
+
+-- Kiểm kê cuối tháng 10 (thủ kho NV018, NV019): SoLuongMoi = số tồn hiện tại của phụ tùng
+INSERT INTO DieuChinhTonKho (MaDieuChinh, MaPhuTung, MaNhanVien, NgayDieuChinh, SoLuongCu, SoLuongMoi, DonGiaNhap, LyDo) VALUES
+    ('DC001', 'PT001', 'NV018', '2026-10-26', 26, 24, 95000, N'Kiểm kê cuối tháng 10: vỡ 2 chai nhớt khi xếp kho'),
+    ('DC002', 'PT024', 'NV018', '2026-10-26', 18, 16, 55000, N'Kiểm kê cuối tháng 10: 2 chai dầu phanh bị rò rỉ, hủy bỏ'),
+    ('DC003', 'PT007', 'NV019', '2026-10-26', 19, 20, 45000, N'Kiểm kê cuối tháng 10: thừa 1 bugi so với sổ sách'),
+    ('DC004', 'PT011', 'NV018', '2026-10-27', 16, 15, 520000, N'Lốp bị lỗi sản xuất, trả lại nhà cung cấp'),
+    ('DC005', 'PT017', 'NV019', '2026-10-27', 19, 18, 280000, N'Ắc quy hỏng khi kiểm tra sạc');
+
+-- Quản lý NV001 chỉnh giá bán: GiaBanMoi = giá bán hiện tại của phụ tùng
+INSERT INTO DieuChinhGiaBan (MaDieuChinhGia, MaPhuTung, MaNhanVien, NgayDieuChinh, GiaBanCu, GiaBanMoi, LyDo) VALUES
+    ('DG001', 'PT011', 'NV001', '2026-09-01', 620000, 650000, N'Nhà cung cấp tăng giá lốp Michelin'),
+    ('DG002', 'PT001', 'NV001', '2026-09-15', 120000, 125000, N'Điều chỉnh theo giá thị trường'),
+    ('DG003', 'PT017', 'NV001', '2026-10-05', 380000, 360000, N'Giảm giá để cạnh tranh với cửa hàng lân cận'),
+    ('DG004', 'PT022', 'NV001', '2026-10-20', 95000, 90000, N'Khuyến mãi tháng 10'),
+    ('DG005', 'PT033', 'NV001', '2026-10-27', 55000, 50000, N'Nhập nhầm giá bán khi lập phiếu PN026');
 GO
 
 /* =====================================================================

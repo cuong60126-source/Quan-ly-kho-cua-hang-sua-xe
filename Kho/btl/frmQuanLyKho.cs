@@ -28,6 +28,13 @@ namespace btl
 
 			LoadPhuTung();
 			LoadPhieuNhap();
+			LoadDieuChinh();
+		}
+
+		// Escape dấu ' để mã NV/lý do có dấu nháy không làm hỏng câu SQL
+		private string EscapeSql(string value)
+		{
+			return value.Replace("'", "''");
 		}
 
 		// ===== Phụ tùng =====
@@ -90,17 +97,55 @@ namespace btl
 				return;
 			}
 
-			if (MessageBox.Show("Điều chỉnh tồn " + maPhuTung + ": " + soLuongTon + " → " + soLuongTonMoi + "?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+			if (!KiemTraThongTinDieuChinh())
+			{
+				return;
+			}
+
+			decimal donGiaNhap = Convert.ToDecimal(dgvPhuTung.CurrentRow.Cells["colDonGiaNhap"].Value);
+			decimal tienLech = soLuongDieuChinh * donGiaNhap;
+
+			if (MessageBox.Show("Điều chỉnh tồn " + maPhuTung + ": " + soLuongTon + " → " + soLuongTonMoi + " (tiền lệch " + tienLech.ToString("N0") + ")?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
 			{
 				try
 				{
-					string sqlDieuChinhSoLuong = "Update PhuTung Set SoLuongTon = SoLuongTon + (" + soLuongDieuChinh + ") Where MaPhuTung = '" + maPhuTung + "'";
+					string maDieuChinh = GenerateMaDieuChinh("DieuChinhTonKho", "MaDieuChinh", "DC");
+					string maNV = EscapeSql(txtMaNVDieuChinh.Text.Trim());
+					string lyDo = EscapeSql(txtLyDoDieuChinh.Text.Trim());
+
+					// Ghi lịch sử và cập nhật tồn trong 1 transaction, số lượng cũ lấy từ database
+					string sqlDieuChinhSoLuong = $"""
+					SET XACT_ABORT ON;
+
+					BEGIN TRY
+					    BEGIN TRANSACTION;
+
+					    INSERT INTO dbo.DieuChinhTonKho (MaDieuChinh, MaPhuTung, MaNhanVien, NgayDieuChinh, SoLuongCu, SoLuongMoi, DonGiaNhap, LyDo)
+					    SELECT '{maDieuChinh}', MaPhuTung, '{maNV}', CAST(GETDATE() AS DATE), SoLuongTon, SoLuongTon + ({soLuongDieuChinh}), DonGiaNhap, N'{lyDo}'
+					    FROM dbo.PhuTung
+					    WHERE MaPhuTung = '{maPhuTung}';
+
+					    UPDATE dbo.PhuTung
+					    SET SoLuongTon = SoLuongTon + ({soLuongDieuChinh})
+					    WHERE MaPhuTung = '{maPhuTung}';
+
+					    COMMIT TRANSACTION;
+					END TRY
+					BEGIN CATCH
+					    IF @@TRANCOUNT > 0
+					        ROLLBACK TRANSACTION;
+
+					    THROW;
+					END CATCH;
+					""";
 
 					dtbase.ChangeData(sqlDieuChinhSoLuong);
 
 					nudSoLuongDieuChinh.Value = 0;
+					txtLyDoDieuChinh.Clear();
 
 					LoadPhuTung();
+					LoadDieuChinh();
 				}
 				catch (Exception ex)
 				{
@@ -151,6 +196,11 @@ namespace btl
 				return;
 			}
 
+			if (!KiemTraThongTinDieuChinh())
+			{
+				return;
+			}
+
 			string xacNhan = "Điều chỉnh giá bán " + maPhuTung + ": " + donGiaBan.ToString("N0") + " → " + donGiaBanMoi.ToString("N0") + "?";
 
 			// Giá thị trường giảm thì được bán thấp hơn giá nhập, chỉ cảnh báo để tránh gõ nhầm
@@ -163,13 +213,43 @@ namespace btl
 			{
 				try
 				{
-					string sqlDieuChinhGiaBan = "Update PhuTung Set DonGiaBan = " + donGiaBanMoi.ToString("0") + " Where MaPhuTung = '" + maPhuTung + "'";
+					string maDieuChinhGia = GenerateMaDieuChinh("DieuChinhGiaBan", "MaDieuChinhGia", "DG");
+					string maNV = EscapeSql(txtMaNVDieuChinh.Text.Trim());
+					string lyDo = EscapeSql(txtLyDoDieuChinh.Text.Trim());
+
+					// Ghi lịch sử và cập nhật giá bán trong 1 transaction, giá cũ lấy từ database
+					string sqlDieuChinhGiaBan = $"""
+					SET XACT_ABORT ON;
+
+					BEGIN TRY
+					    BEGIN TRANSACTION;
+
+					    INSERT INTO dbo.DieuChinhGiaBan (MaDieuChinhGia, MaPhuTung, MaNhanVien, NgayDieuChinh, GiaBanCu, GiaBanMoi, LyDo)
+					    SELECT '{maDieuChinhGia}', MaPhuTung, '{maNV}', CAST(GETDATE() AS DATE), DonGiaBan, {donGiaBanMoi.ToString("0")}, N'{lyDo}'
+					    FROM dbo.PhuTung
+					    WHERE MaPhuTung = '{maPhuTung}';
+
+					    UPDATE dbo.PhuTung
+					    SET DonGiaBan = {donGiaBanMoi.ToString("0")}
+					    WHERE MaPhuTung = '{maPhuTung}';
+
+					    COMMIT TRANSACTION;
+					END TRY
+					BEGIN CATCH
+					    IF @@TRANCOUNT > 0
+					        ROLLBACK TRANSACTION;
+
+					    THROW;
+					END CATCH;
+					""";
 
 					dtbase.ChangeData(sqlDieuChinhGiaBan);
 
 					txtDonGiaBanMoi.Clear();
+					txtLyDoDieuChinh.Clear();
 
 					LoadPhuTung();
+					LoadDieuChinh();
 				}
 				catch (Exception ex)
 				{
@@ -188,6 +268,93 @@ namespace btl
 				"Order By pt.MaPhuTung Asc";
 
 			dgvPhuTung.DataSource = dtbase.ReadData(sqlTimPhuTung);
+		}
+
+		// Mã NV và lý do bắt buộc cho mọi lần điều chỉnh tồn/giá bán
+		private bool KiemTraThongTinDieuChinh()
+		{
+			if (txtMaNVDieuChinh.Text.Trim() == "" || txtLyDoDieuChinh.Text.Trim() == "")
+			{
+				MessageBox.Show("Nhập mã NV và lý do điều chỉnh!", "Thông báo");
+				return false;
+			}
+
+			string sqlNhanVien = "Select * " +
+				"From NhanVien " +
+				"Where MaNhanVien = '" + EscapeSql(txtMaNVDieuChinh.Text.Trim()) + "'";
+
+			if (dtbase.ReadData(sqlNhanVien).Rows.Count == 0)
+			{
+				MessageBox.Show("Mã nhân viên không tồn tại!", "Thông báo");
+				txtMaNVDieuChinh.Focus();
+				return false;
+			}
+
+			return true;
+		}
+
+		private string GenerateMaDieuChinh(string bang, string cot, string tienTo)
+		{
+			string sql = "Select Max(Cast(Substring(" + cot + ", 3, Len(" + cot + ")) As int)) From " + bang;
+
+			DataTable data = dtbase.ReadData(sql);
+
+			int so = 1;
+			if (data.Rows.Count > 0 && data.Rows[0][0] != DBNull.Value)
+			{
+				so = Convert.ToInt32(data.Rows[0][0]) + 1;
+			}
+
+			return tienTo + so.ToString("D3");
+		}
+
+		// ===== Lịch sử điều chỉnh =====
+
+		private void LoadDieuChinh()
+		{
+			string timPhuTung = EscapeSql(txtTimDieuChinh.Text);
+
+			string sqlDieuChinhTonKho = "Select dc.MaDieuChinh, dc.NgayDieuChinh, dc.MaPhuTung, pt.TenPhuTung, dc.SoLuongCu, dc.SoLuongMoi, dc.DonGiaNhap, dc.GiaTriChenhLech, dc.MaNhanVien, dc.LyDo " +
+				"From DieuChinhTonKho dc Join PhuTung pt On dc.MaPhuTung = pt.MaPhuTung " +
+				"Where dc.MaPhuTung Like '%" + timPhuTung + "%' " +
+				"Order By dc.MaDieuChinh Desc";
+
+			DataTable dataTonKho = dtbase.ReadData(sqlDieuChinhTonKho);
+
+			dgvDieuChinhTonKho.AutoGenerateColumns = false;
+			dgvDieuChinhTonKho.DataSource = dataTonKho;
+			dgvDieuChinhTonKho.ReadOnly = true;
+
+			// Tiền lệch dương là thừa hàng, âm là thiếu hàng
+			decimal tongThua = 0, tongThieu = 0;
+			foreach (DataRow row in dataTonKho.Rows)
+			{
+				decimal tienLech = Convert.ToDecimal(row["GiaTriChenhLech"]);
+				if (tienLech > 0)
+				{
+					tongThua += tienLech;
+				}
+				else
+				{
+					tongThieu += tienLech;
+				}
+			}
+
+			lblTongTienLech.Text = "Tổng thừa: " + tongThua.ToString("N0") + "    Tổng thiếu: " + tongThieu.ToString("N0") + "    Tổng tiền lệch: " + (tongThua + tongThieu).ToString("N0");
+
+			string sqlDieuChinhGiaBan = "Select dg.MaDieuChinhGia, dg.NgayDieuChinh, dg.MaPhuTung, pt.TenPhuTung, dg.GiaBanCu, dg.GiaBanMoi, dg.MaNhanVien, dg.LyDo " +
+				"From DieuChinhGiaBan dg Join PhuTung pt On dg.MaPhuTung = pt.MaPhuTung " +
+				"Where dg.MaPhuTung Like '%" + timPhuTung + "%' " +
+				"Order By dg.MaDieuChinhGia Desc";
+
+			dgvDieuChinhGiaBan.AutoGenerateColumns = false;
+			dgvDieuChinhGiaBan.DataSource = dtbase.ReadData(sqlDieuChinhGiaBan);
+			dgvDieuChinhGiaBan.ReadOnly = true;
+		}
+
+		private void txtTimDieuChinh_TextChanged(object sender, EventArgs e)
+		{
+			LoadDieuChinh();
 		}
 
 		// ===== Phiếu nhập =====
@@ -340,21 +507,12 @@ namespace btl
 					    )
 					        THROW 50001, N'Phiếu nhập có phụ tùng đã được dùng trong dịch vụ, không thể xóa!', 1;
 
-					    -- 2. Phụ tùng chỉ thuộc phiếu này mà tồn khác số lượng nhập => đã điều chỉnh tồn bằng tay
-					    SELECT TOP 1 @Loi = N'Phụ tùng ' + PT.MaPhuTung + N' đã được điều chỉnh tồn ('
-					        + CAST(PT.SoLuongTon AS NVARCHAR(20)) + N' ≠ ' + CAST(CT.SoLuongNhap AS NVARCHAR(20))
-					        + N'), hãy điều chỉnh lại hoặc dùng Sửa phiếu!'
+					    -- 2. Phụ tùng đã có lịch sử điều chỉnh tồn/giá bán thì không được xóa phiếu
+					    SELECT TOP 1 @Loi = N'Phụ tùng ' + CT.MaPhuTung + N' đã có điều chỉnh tồn hoặc giá bán, không thể xóa phiếu!'
 					    FROM dbo.ChiTietPhieuNhap CT
-					    JOIN dbo.PhuTung PT ON PT.MaPhuTung = CT.MaPhuTung
 					    WHERE CT.MaPhieuNhap = @MaPhieuNhap
-					      AND PT.SoLuongTon <> CT.SoLuongNhap
-					      AND NOT EXISTS
-					      (
-					          SELECT 1
-					          FROM dbo.ChiTietPhieuNhap CT2
-					          WHERE CT2.MaPhuTung = CT.MaPhuTung
-					            AND CT2.MaPhieuNhap <> @MaPhieuNhap
-					      );
+					      AND (EXISTS (SELECT 1 FROM dbo.DieuChinhTonKho DC WHERE DC.MaPhuTung = CT.MaPhuTung)
+					        OR EXISTS (SELECT 1 FROM dbo.DieuChinhGiaBan DG WHERE DG.MaPhuTung = CT.MaPhuTung));
 
 					    IF @Loi IS NOT NULL
 					        THROW 50002, @Loi, 1;
