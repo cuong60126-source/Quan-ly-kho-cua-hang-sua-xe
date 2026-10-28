@@ -28,9 +28,9 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
-			tabTrai = new TabControl();
+			tabChinh = new TabControl();
 			tabPhuTung = new TabPage();
-			tabLichSu = new TabPage();
+			tabPhieuNhap = new TabPage();
 			lblMaNVDieuChinh = new Label();
 			txtMaNVDieuChinh = new TextBox();
 			lblLyDoDieuChinh = new Label();
@@ -105,9 +105,12 @@
 			btnXoaPhieuNhap = new Button();
 			btnSuaPhieuNhap = new Button();
 			btnThemPhieuNhap = new Button();
-			tabTrai.SuspendLayout();
+			btnXuatExcelPhieuNhap = new Button();
+			btnXuatExcelPhuTung = new Button();
+			btnThoatPhuTung = new Button();
+			tabChinh.SuspendLayout();
 			tabPhuTung.SuspendLayout();
-			tabLichSu.SuspendLayout();
+			tabPhieuNhap.SuspendLayout();
 			pnlTimDieuChinh.SuspendLayout();
 			grpDieuChinhTonKho.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)dgvDieuChinhTonKho).BeginInit();
@@ -342,14 +345,14 @@
 			//
 			pnlTimPhieuNhap.Controls.Add(txtTimPhieuNhap);
 			pnlTimPhieuNhap.Controls.Add(lblTimPhieuNhap);
-			pnlTimPhieuNhap.Location = new Point(884, 12);
+			pnlTimPhieuNhap.Location = new Point(3, 3);
 			pnlTimPhieuNhap.Name = "pnlTimPhieuNhap";
-			pnlTimPhieuNhap.Size = new Size(858, 58);
+			pnlTimPhieuNhap.Size = new Size(1713, 50);
 			pnlTimPhieuNhap.TabIndex = 2;
 			//
 			// txtTimPhieuNhap
 			//
-			txtTimPhieuNhap.Location = new Point(103, 17);
+			txtTimPhieuNhap.Location = new Point(103, 12);
 			txtTimPhieuNhap.Name = "txtTimPhieuNhap";
 			txtTimPhieuNhap.Size = new Size(239, 27);
 			txtTimPhieuNhap.TabIndex = 1;
@@ -358,7 +361,7 @@
 			// lblTimPhieuNhap
 			//
 			lblTimPhieuNhap.AutoSize = true;
-			lblTimPhieuNhap.Location = new Point(41, 20);
+			lblTimPhieuNhap.Location = new Point(41, 15);
 			lblTimPhieuNhap.Name = "lblTimPhieuNhap";
 			lblTimPhieuNhap.Size = new Size(37, 20);
 			lblTimPhieuNhap.TabIndex = 0;
@@ -367,9 +370,9 @@
 			// grpPhieuNhap
 			//
 			grpPhieuNhap.Controls.Add(dgvPhieuNhap);
-			grpPhieuNhap.Location = new Point(884, 76);
+			grpPhieuNhap.Location = new Point(3, 56);
 			grpPhieuNhap.Name = "grpPhieuNhap";
-			grpPhieuNhap.Size = new Size(858, 296);
+			grpPhieuNhap.Size = new Size(852, 620);
 			grpPhieuNhap.TabIndex = 3;
 			grpPhieuNhap.TabStop = false;
 			grpPhieuNhap.Text = "Danh sách phiếu nhập";
@@ -383,7 +386,7 @@
 			dgvPhieuNhap.Location = new Point(6, 26);
 			dgvPhieuNhap.Name = "dgvPhieuNhap";
 			dgvPhieuNhap.RowHeadersWidth = 51;
-			dgvPhieuNhap.Size = new Size(846, 264);
+			dgvPhieuNhap.Size = new Size(840, 588);
 			dgvPhieuNhap.TabIndex = 0;
 			dgvPhieuNhap.CellClick += dgvPhieuNhap_CellClick;
 			//
@@ -438,9 +441,9 @@
 			// grpChiTietPhieuNhap
 			//
 			grpChiTietPhieuNhap.Controls.Add(dgvChiTietPhieuNhap);
-			grpChiTietPhieuNhap.Location = new Point(884, 378);
+			grpChiTietPhieuNhap.Location = new Point(864, 56);
 			grpChiTietPhieuNhap.Name = "grpChiTietPhieuNhap";
-			grpChiTietPhieuNhap.Size = new Size(858, 299);
+			grpChiTietPhieuNhap.Size = new Size(852, 620);
 			grpChiTietPhieuNhap.TabIndex = 4;
 			grpChiTietPhieuNhap.TabStop = false;
 			grpChiTietPhieuNhap.Text = "Thông tin phiếu nhập";
@@ -454,7 +457,7 @@
 			dgvChiTietPhieuNhap.Location = new Point(6, 26);
 			dgvChiTietPhieuNhap.Name = "dgvChiTietPhieuNhap";
 			dgvChiTietPhieuNhap.RowHeadersWidth = 51;
-			dgvChiTietPhieuNhap.Size = new Size(846, 267);
+			dgvChiTietPhieuNhap.Size = new Size(840, 588);
 			dgvChiTietPhieuNhap.TabIndex = 0;
 			//
 			// colChiTietMaPhieuNhap
@@ -507,19 +510,20 @@
 			//
 			// pnlChucNangPhieuNhap
 			//
+			pnlChucNangPhieuNhap.Controls.Add(btnXuatExcelPhieuNhap);
 			pnlChucNangPhieuNhap.Controls.Add(btnInPhieuNhap);
 			pnlChucNangPhieuNhap.Controls.Add(btnThoat);
 			pnlChucNangPhieuNhap.Controls.Add(btnXoaPhieuNhap);
 			pnlChucNangPhieuNhap.Controls.Add(btnSuaPhieuNhap);
 			pnlChucNangPhieuNhap.Controls.Add(btnThemPhieuNhap);
-			pnlChucNangPhieuNhap.Location = new Point(884, 683);
+			pnlChucNangPhieuNhap.Location = new Point(3, 682);
 			pnlChucNangPhieuNhap.Name = "pnlChucNangPhieuNhap";
-			pnlChucNangPhieuNhap.Size = new Size(858, 121);
+			pnlChucNangPhieuNhap.Size = new Size(1713, 74);
 			pnlChucNangPhieuNhap.TabIndex = 5;
 			//
 			// btnInPhieuNhap
 			//
-			btnInPhieuNhap.Location = new Point(525, 34);
+			btnInPhieuNhap.Location = new Point(525, 10);
 			btnInPhieuNhap.Name = "btnInPhieuNhap";
 			btnInPhieuNhap.Size = new Size(139, 53);
 			btnInPhieuNhap.TabIndex = 11;
@@ -529,7 +533,7 @@
 			//
 			// btnThoat
 			//
-			btnThoat.Location = new Point(690, 34);
+			btnThoat.Location = new Point(1545, 10);
 			btnThoat.Name = "btnThoat";
 			btnThoat.Size = new Size(139, 53);
 			btnThoat.TabIndex = 9;
@@ -539,7 +543,7 @@
 			//
 			// btnXoaPhieuNhap
 			//
-			btnXoaPhieuNhap.Location = new Point(354, 34);
+			btnXoaPhieuNhap.Location = new Point(354, 10);
 			btnXoaPhieuNhap.Name = "btnXoaPhieuNhap";
 			btnXoaPhieuNhap.Size = new Size(139, 53);
 			btnXoaPhieuNhap.TabIndex = 7;
@@ -549,7 +553,7 @@
 			//
 			// btnSuaPhieuNhap
 			//
-			btnSuaPhieuNhap.Location = new Point(191, 34);
+			btnSuaPhieuNhap.Location = new Point(191, 10);
 			btnSuaPhieuNhap.Name = "btnSuaPhieuNhap";
 			btnSuaPhieuNhap.Size = new Size(139, 53);
 			btnSuaPhieuNhap.TabIndex = 6;
@@ -559,7 +563,7 @@
 			//
 			// btnThemPhieuNhap
 			//
-			btnThemPhieuNhap.Location = new Point(29, 34);
+			btnThemPhieuNhap.Location = new Point(29, 10);
 			btnThemPhieuNhap.Name = "btnThemPhieuNhap";
 			btnThemPhieuNhap.Size = new Size(139, 53);
 			btnThemPhieuNhap.TabIndex = 5;
@@ -567,48 +571,84 @@
 			btnThemPhieuNhap.UseVisualStyleBackColor = true;
 			btnThemPhieuNhap.Click += btnThemPhieuNhap_Click;
 			//
-			// tabTrai
+			// btnXuatExcelPhieuNhap
 			//
-			tabTrai.Controls.Add(tabPhuTung);
-			tabTrai.Controls.Add(tabLichSu);
-			tabTrai.Location = new Point(12, 12);
-			tabTrai.Name = "tabTrai";
-			tabTrai.SelectedIndex = 0;
-			tabTrai.Size = new Size(860, 792);
-			tabTrai.TabIndex = 0;
+			btnXuatExcelPhieuNhap.Location = new Point(690, 10);
+			btnXuatExcelPhieuNhap.Name = "btnXuatExcelPhieuNhap";
+			btnXuatExcelPhieuNhap.Size = new Size(139, 53);
+			btnXuatExcelPhieuNhap.TabIndex = 12;
+			btnXuatExcelPhieuNhap.Text = "Xuất Excel";
+			btnXuatExcelPhieuNhap.UseVisualStyleBackColor = true;
+			btnXuatExcelPhieuNhap.Click += btnXuatExcelPhieuNhap_Click;
+			//
+			// btnXuatExcelPhuTung
+			//
+			btnXuatExcelPhuTung.Location = new Point(1420, 700);
+			btnXuatExcelPhuTung.Name = "btnXuatExcelPhuTung";
+			btnXuatExcelPhuTung.Size = new Size(139, 53);
+			btnXuatExcelPhuTung.TabIndex = 4;
+			btnXuatExcelPhuTung.Text = "Xuất Excel";
+			btnXuatExcelPhuTung.UseVisualStyleBackColor = true;
+			btnXuatExcelPhuTung.Click += btnXuatExcelPhuTung_Click;
+			//
+			// btnThoatPhuTung
+			//
+			btnThoatPhuTung.Location = new Point(1577, 700);
+			btnThoatPhuTung.Name = "btnThoatPhuTung";
+			btnThoatPhuTung.Size = new Size(139, 53);
+			btnThoatPhuTung.TabIndex = 5;
+			btnThoatPhuTung.Text = "Thoát";
+			btnThoatPhuTung.UseVisualStyleBackColor = true;
+			btnThoatPhuTung.Click += btnThoat_Click;
+			//
+			// tabChinh
+			//
+			tabChinh.Controls.Add(tabPhuTung);
+			tabChinh.Controls.Add(tabPhieuNhap);
+			tabChinh.Location = new Point(12, 12);
+			tabChinh.Name = "tabChinh";
+			tabChinh.SelectedIndex = 0;
+			tabChinh.Size = new Size(1730, 792);
+			tabChinh.TabIndex = 0;
 			//
 			// tabPhuTung
 			//
+			tabPhuTung.Controls.Add(btnThoatPhuTung);
+			tabPhuTung.Controls.Add(btnXuatExcelPhuTung);
+			tabPhuTung.Controls.Add(grpDieuChinhGiaBan);
+			tabPhuTung.Controls.Add(grpDieuChinhTonKho);
+			tabPhuTung.Controls.Add(pnlTimDieuChinh);
 			tabPhuTung.Controls.Add(grpPhuTung);
 			tabPhuTung.Controls.Add(pnlTimPhuTung);
 			tabPhuTung.Location = new Point(4, 29);
 			tabPhuTung.Name = "tabPhuTung";
 			tabPhuTung.Padding = new Padding(3);
-			tabPhuTung.Size = new Size(852, 759);
+			tabPhuTung.Size = new Size(1722, 759);
 			tabPhuTung.TabIndex = 0;
 			tabPhuTung.Text = "Phụ tùng";
 			tabPhuTung.UseVisualStyleBackColor = true;
 			//
-			// tabLichSu
+			// tabPhieuNhap
 			//
-			tabLichSu.Controls.Add(grpDieuChinhGiaBan);
-			tabLichSu.Controls.Add(grpDieuChinhTonKho);
-			tabLichSu.Controls.Add(pnlTimDieuChinh);
-			tabLichSu.Location = new Point(4, 29);
-			tabLichSu.Name = "tabLichSu";
-			tabLichSu.Padding = new Padding(3);
-			tabLichSu.Size = new Size(852, 759);
-			tabLichSu.TabIndex = 1;
-			tabLichSu.Text = "Lịch sử điều chỉnh";
-			tabLichSu.UseVisualStyleBackColor = true;
+			tabPhieuNhap.Controls.Add(pnlChucNangPhieuNhap);
+			tabPhieuNhap.Controls.Add(grpChiTietPhieuNhap);
+			tabPhieuNhap.Controls.Add(grpPhieuNhap);
+			tabPhieuNhap.Controls.Add(pnlTimPhieuNhap);
+			tabPhieuNhap.Location = new Point(4, 29);
+			tabPhieuNhap.Name = "tabPhieuNhap";
+			tabPhieuNhap.Padding = new Padding(3);
+			tabPhieuNhap.Size = new Size(1722, 759);
+			tabPhieuNhap.TabIndex = 1;
+			tabPhieuNhap.Text = "Phiếu nhập";
+			tabPhieuNhap.UseVisualStyleBackColor = true;
 			//
 			// pnlTimDieuChinh
 			//
 			pnlTimDieuChinh.Controls.Add(txtTimDieuChinh);
 			pnlTimDieuChinh.Controls.Add(lblTimDieuChinh);
-			pnlTimDieuChinh.Location = new Point(3, 3);
+			pnlTimDieuChinh.Location = new Point(850, 3);
 			pnlTimDieuChinh.Name = "pnlTimDieuChinh";
-			pnlTimDieuChinh.Size = new Size(838, 50);
+			pnlTimDieuChinh.Size = new Size(866, 50);
 			pnlTimDieuChinh.TabIndex = 0;
 			//
 			// txtTimDieuChinh
@@ -632,9 +672,9 @@
 			//
 			grpDieuChinhTonKho.Controls.Add(lblTongTienLech);
 			grpDieuChinhTonKho.Controls.Add(dgvDieuChinhTonKho);
-			grpDieuChinhTonKho.Location = new Point(3, 56);
+			grpDieuChinhTonKho.Location = new Point(850, 56);
 			grpDieuChinhTonKho.Name = "grpDieuChinhTonKho";
-			grpDieuChinhTonKho.Size = new Size(838, 400);
+			grpDieuChinhTonKho.Size = new Size(866, 400);
 			grpDieuChinhTonKho.TabIndex = 1;
 			grpDieuChinhTonKho.TabStop = false;
 			grpDieuChinhTonKho.Text = "Lịch sử điều chỉnh tồn";
@@ -657,7 +697,7 @@
 			dgvDieuChinhTonKho.Location = new Point(6, 26);
 			dgvDieuChinhTonKho.Name = "dgvDieuChinhTonKho";
 			dgvDieuChinhTonKho.RowHeadersWidth = 51;
-			dgvDieuChinhTonKho.Size = new Size(826, 330);
+			dgvDieuChinhTonKho.Size = new Size(854, 330);
 			dgvDieuChinhTonKho.TabIndex = 0;
 			//
 			// colDieuChinhMa
@@ -743,9 +783,9 @@
 			// grpDieuChinhGiaBan
 			//
 			grpDieuChinhGiaBan.Controls.Add(dgvDieuChinhGiaBan);
-			grpDieuChinhGiaBan.Location = new Point(3, 460);
+			grpDieuChinhGiaBan.Location = new Point(850, 460);
 			grpDieuChinhGiaBan.Name = "grpDieuChinhGiaBan";
-			grpDieuChinhGiaBan.Size = new Size(838, 293);
+			grpDieuChinhGiaBan.Size = new Size(866, 232);
 			grpDieuChinhGiaBan.TabIndex = 2;
 			grpDieuChinhGiaBan.TabStop = false;
 			grpDieuChinhGiaBan.Text = "Lịch sử điều chỉnh giá bán";
@@ -759,7 +799,7 @@
 			dgvDieuChinhGiaBan.Location = new Point(6, 26);
 			dgvDieuChinhGiaBan.Name = "dgvDieuChinhGiaBan";
 			dgvDieuChinhGiaBan.RowHeadersWidth = 51;
-			dgvDieuChinhGiaBan.Size = new Size(826, 258);
+			dgvDieuChinhGiaBan.Size = new Size(854, 198);
 			dgvDieuChinhGiaBan.TabIndex = 0;
 			//
 			// colGiaBanMa
@@ -831,19 +871,15 @@
 			AutoScaleDimensions = new SizeF(8F, 20F);
 			AutoScaleMode = AutoScaleMode.Font;
 			ClientSize = new Size(1754, 816);
-			Controls.Add(pnlChucNangPhieuNhap);
-			Controls.Add(grpChiTietPhieuNhap);
-			Controls.Add(grpPhieuNhap);
-			Controls.Add(pnlTimPhieuNhap);
-			Controls.Add(tabTrai);
+			Controls.Add(tabChinh);
 			FormBorderStyle = FormBorderStyle.FixedSingle;
 			MaximizeBox = false;
 			Name = "frmQuanLyKho";
 			Text = "frmQuanLyKho";
 			Load += frmQuanLyKho_Load;
-			tabTrai.ResumeLayout(false);
+			tabChinh.ResumeLayout(false);
 			tabPhuTung.ResumeLayout(false);
-			tabLichSu.ResumeLayout(false);
+			tabPhieuNhap.ResumeLayout(false);
 			pnlTimDieuChinh.ResumeLayout(false);
 			pnlTimDieuChinh.PerformLayout();
 			grpDieuChinhTonKho.ResumeLayout(false);
@@ -869,9 +905,9 @@
 
 		#endregion
 
-		private TabControl tabTrai;
+		private TabControl tabChinh;
 		private TabPage tabPhuTung;
-		private TabPage tabLichSu;
+		private TabPage tabPhieuNhap;
 		private Label lblMaNVDieuChinh;
 		private TextBox txtMaNVDieuChinh;
 		private Label lblLyDoDieuChinh;
@@ -946,5 +982,8 @@
 		private Button btnXoaPhieuNhap;
 		private Button btnSuaPhieuNhap;
 		private Button btnThemPhieuNhap;
+		private Button btnXuatExcelPhieuNhap;
+		private Button btnXuatExcelPhuTung;
+		private Button btnThoatPhuTung;
 	}
 }

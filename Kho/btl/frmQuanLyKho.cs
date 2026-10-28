@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using System.Drawing.Printing;
 using System.Windows.Markup;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using ClosedXML.Excel;
 
 namespace btl
 {
@@ -325,8 +326,25 @@ namespace btl
 			dgvDieuChinhTonKho.DataSource = dataTonKho;
 			dgvDieuChinhTonKho.ReadOnly = true;
 
-			// Tiền lệch dương là thừa hàng, âm là thiếu hàng
-			decimal tongThua = 0, tongThieu = 0;
+			TinhTongTienLech(dataTonKho, out decimal tongThua, out decimal tongThieu);
+
+			lblTongTienLech.Text = "Tổng thừa: " + tongThua.ToString("N0") + "    Tổng thiếu: " + tongThieu.ToString("N0") + "    Tổng tiền lệch: " + (tongThua + tongThieu).ToString("N0");
+
+			string sqlDieuChinhGiaBan = "Select dg.MaDieuChinhGia, dg.NgayDieuChinh, dg.MaPhuTung, pt.TenPhuTung, dg.GiaBanCu, dg.GiaBanMoi, dg.MaNhanVien, dg.LyDo " +
+				"From DieuChinhGiaBan dg Join PhuTung pt On dg.MaPhuTung = pt.MaPhuTung " +
+				"Where dg.MaPhuTung Like '%" + timPhuTung + "%' " +
+				"Order By dg.MaDieuChinhGia Desc";
+
+			dgvDieuChinhGiaBan.AutoGenerateColumns = false;
+			dgvDieuChinhGiaBan.DataSource = dtbase.ReadData(sqlDieuChinhGiaBan);
+			dgvDieuChinhGiaBan.ReadOnly = true;
+		}
+
+		// Tiền lệch dương là thừa hàng, âm là thiếu hàng
+		private void TinhTongTienLech(DataTable dataTonKho, out decimal tongThua, out decimal tongThieu)
+		{
+			tongThua = 0;
+			tongThieu = 0;
 			foreach (DataRow row in dataTonKho.Rows)
 			{
 				decimal tienLech = Convert.ToDecimal(row["GiaTriChenhLech"]);
@@ -339,17 +357,6 @@ namespace btl
 					tongThieu += tienLech;
 				}
 			}
-
-			lblTongTienLech.Text = "Tổng thừa: " + tongThua.ToString("N0") + "    Tổng thiếu: " + tongThieu.ToString("N0") + "    Tổng tiền lệch: " + (tongThua + tongThieu).ToString("N0");
-
-			string sqlDieuChinhGiaBan = "Select dg.MaDieuChinhGia, dg.NgayDieuChinh, dg.MaPhuTung, pt.TenPhuTung, dg.GiaBanCu, dg.GiaBanMoi, dg.MaNhanVien, dg.LyDo " +
-				"From DieuChinhGiaBan dg Join PhuTung pt On dg.MaPhuTung = pt.MaPhuTung " +
-				"Where dg.MaPhuTung Like '%" + timPhuTung + "%' " +
-				"Order By dg.MaDieuChinhGia Desc";
-
-			dgvDieuChinhGiaBan.AutoGenerateColumns = false;
-			dgvDieuChinhGiaBan.DataSource = dtbase.ReadData(sqlDieuChinhGiaBan);
-			dgvDieuChinhGiaBan.ReadOnly = true;
 		}
 
 		private void txtTimDieuChinh_TextChanged(object sender, EventArgs e)
@@ -721,6 +728,161 @@ namespace btl
 			else
 			{
 				CapNhatNutPhieuNhap("");
+			}
+		}
+
+		// ===== Xuất Excel =====
+
+		private string ChonFileLuu(string tenFile)
+		{
+			using (SaveFileDialog dialog = new SaveFileDialog())
+			{
+				dialog.Filter = "Excel (*.xlsx)|*.xlsx";
+				// Thêm giờ phút để mỗi lần xuất ra 1 file riêng, không ghi đè lần xuất trước
+				dialog.FileName = tenFile + "_" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm") + ".xlsx";
+
+				return dialog.ShowDialog() == DialogResult.OK ? dialog.FileName : "";
+			}
+		}
+
+		// Ghi 1 bảng ra 1 sheet: tiền định dạng #,##0, ngày định dạng dd/MM/yyyy
+		private IXLWorksheet ThemSheet(XLWorkbook wb, string tenSheet, DataTable data, string[] cot, string[] tieuDe)
+		{
+			IXLWorksheet ws = wb.Worksheets.Add(tenSheet);
+
+			for (int j = 0; j < tieuDe.Length; j++)
+			{
+				ws.Cell(1, j + 1).Value = tieuDe[j];
+			}
+
+			for (int i = 0; i < data.Rows.Count; i++)
+			{
+				for (int j = 0; j < cot.Length; j++)
+				{
+					object giaTri = data.Rows[i][cot[j]];
+					IXLCell cell = ws.Cell(i + 2, j + 1);
+
+					if (giaTri is DateTime ngay)
+					{
+						cell.Value = ngay;
+						cell.Style.NumberFormat.Format = "dd/MM/yyyy";
+					}
+					else if (giaTri is decimal tien)
+					{
+						cell.Value = (double)tien;
+						cell.Style.NumberFormat.Format = "#,##0";
+					}
+					else if (giaTri is int so)
+					{
+						cell.Value = so;
+					}
+					else if (giaTri != DBNull.Value)
+					{
+						cell.Value = giaTri.ToString();
+					}
+				}
+			}
+
+			// Kẻ bảng có lọc; bảng trống vẫn giữ 1 dòng để Excel tạo được bảng
+			ws.Range(1, 1, Math.Max(data.Rows.Count, 1) + 1, cot.Length).CreateTable();
+			ws.Columns().AdjustToContents();
+
+			return ws;
+		}
+
+		// Cột và tiêu đề lấy theo lưới đang hiện, dữ liệu theo ô tìm
+		private IXLWorksheet ThemSheet(XLWorkbook wb, string tenSheet, DataGridView dgv)
+		{
+			List<DataGridViewColumn> cot = dgv.Columns.Cast<DataGridViewColumn>().Where(c => c.Visible).OrderBy(c => c.DisplayIndex).ToList();
+
+			return ThemSheet(wb, tenSheet, (DataTable)dgv.DataSource, cot.Select(c => c.DataPropertyName).ToArray(), cot.Select(c => c.HeaderText).ToArray());
+		}
+
+		private void LuuExcel(XLWorkbook wb, string duongDan)
+		{
+			try
+			{
+				wb.SaveAs(duongDan);
+
+				MessageBox.Show("Xuất file thành công!", "Thông báo");
+			}
+			catch (IOException)
+			{
+				MessageBox.Show("File đang được mở, hãy đóng file rồi thử lại!", "Thông báo");
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show("Lỗi khi xuất file: " + ex.Message, "Thông báo");
+			}
+		}
+
+		// 1 file gồm 3 sheet: phụ tùng, lịch sử điều chỉnh tồn (kèm dòng tổng), lịch sử điều chỉnh giá bán
+		private void btnXuatExcelPhuTung_Click(object sender, EventArgs e)
+		{
+			string duongDan = ChonFileLuu("PhuTung");
+
+			if (duongDan == "")
+			{
+				return;
+			}
+
+			using (XLWorkbook wb = new XLWorkbook())
+			{
+				ThemSheet(wb, "Phụ tùng", dgvPhuTung);
+
+				DataTable dataTonKho = (DataTable)dgvDieuChinhTonKho.DataSource;
+				IXLWorksheet wsTonKho = ThemSheet(wb, "Điều chỉnh tồn", dgvDieuChinhTonKho);
+
+				// Dòng tổng nằm dưới bảng, số tiền thẳng cột "Tiền lệch"
+				TinhTongTienLech(dataTonKho, out decimal tongThua, out decimal tongThieu);
+				int dong = Math.Max(dataTonKho.Rows.Count, 1) + 3;
+				int cotTienLech = colDieuChinhGiaTriChenhLech.DisplayIndex + 1;
+				string[] nhan = { "Tổng thừa:", "Tổng thiếu:", "Tổng tiền lệch:" };
+				decimal[] tong = { tongThua, tongThieu, tongThua + tongThieu };
+
+				for (int i = 0; i < nhan.Length; i++)
+				{
+					wsTonKho.Cell(dong + i, cotTienLech - 1).Value = nhan[i];
+					wsTonKho.Cell(dong + i, cotTienLech).Value = (double)tong[i];
+					wsTonKho.Cell(dong + i, cotTienLech).Style.NumberFormat.Format = "#,##0";
+					wsTonKho.Range(dong + i, cotTienLech - 1, dong + i, cotTienLech).Style.Font.Bold = true;
+				}
+				wsTonKho.Columns().AdjustToContents();
+
+				ThemSheet(wb, "Điều chỉnh giá bán", dgvDieuChinhGiaBan);
+
+				LuuExcel(wb, duongDan);
+			}
+		}
+
+		// 1 file gồm 2 sheet: phiếu nhập và chi tiết của các phiếu đang hiện trên lưới
+		private void btnXuatExcelPhieuNhap_Click(object sender, EventArgs e)
+		{
+			string duongDan = ChonFileLuu("PhieuNhap");
+
+			if (duongDan == "")
+			{
+				return;
+			}
+
+			DataTable dataPhieuNhap = (DataTable)dgvPhieuNhap.DataSource;
+			List<string> dsMaPhieuNhap = dataPhieuNhap.AsEnumerable().Select(r => "'" + r["MaPhieuNhap"].ToString() + "'").ToList();
+
+			string sqlChiTiet = "Select ct.MaPhieuNhap, ct.MaPhuTung, pt.TenPhuTung, ncc.TenNhaCungCap, ct.SoLuongNhap, pt.DonGiaNhap, ct.ThanhTien, pt.HanSuDung " +
+				"From ChiTietPhieuNhap ct Join PhuTung pt On ct.MaPhuTung = pt.MaPhuTung " +
+				"Join NhaCungCap ncc On pt.MaNhaCungCap = ncc.MaNhaCungCap " +
+				"Where " + (dsMaPhieuNhap.Count > 0 ? "ct.MaPhieuNhap In (" + string.Join(", ", dsMaPhieuNhap) + ")" : "1 = 0") + " " +
+				"Order By ct.MaPhieuNhap, ct.MaPhuTung";
+
+			using (XLWorkbook wb = new XLWorkbook())
+			{
+				ThemSheet(wb, "Phiếu nhập", dgvPhieuNhap);
+
+				ThemSheet(wb, "Chi tiết phiếu nhập", dtbase.ReadData(sqlChiTiet),
+					new string[] { "MaPhieuNhap", "MaPhuTung", "TenPhuTung", "TenNhaCungCap", "SoLuongNhap", "DonGiaNhap", "ThanhTien", "HanSuDung" },
+					new string[] { "Mã phiếu nhập", "Mã phụ tùng", "Tên phụ tùng", "Nhà cung cấp", "Số lượng nhập", "Đơn giá nhập", "Thành tiền", "Hạn sử dụng" });
+
+				LuuExcel(wb, duongDan);
 			}
 		}
 
