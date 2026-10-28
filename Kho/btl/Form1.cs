@@ -32,7 +32,6 @@ namespace btl
 
 			if(dataCheck.Rows.Count > 0)
 			{
-				// MaNCC và HanSuDung nằm ở bảng PhuTung, không phải ChiTietPhieuNhap
 				string sqlDgvPhuTung = "Select pn.MaPhieuNhap, ncc.TenNCC, pn.NgayNhap, pt.MaPhuTung, pt.TenPhuTung, ct.SoLuong As SoLuongNhap, ct.DonGiaNhap, pt.DonGiaBan, ct.ThanhTien, pt.HanSuDung, pn.MaNhanVienNhap, pn.GhiChu " +
 					"From PhuTung pt Join ChiTietPhieuNhap ct On pt.MaPhuTung = ct.MaPhuTung " +
 					"Join PhieuNhap pn On pn.MaPhieuNhap = ct.MaPhieuNhap " +
@@ -40,7 +39,6 @@ namespace btl
 					"Where pn.MaPhieuNhap = '" + maPhieuNhap + "' " +
 					"Order By ct.MaChiTietPhieuNhap";
 
-				// Thêm từng dòng thay vì gán DataSource, để nút Thêm phụ tùng (Rows.Add) vẫn dùng được
 				foreach (DataRow data in dtbase.ReadData(sqlDgvPhuTung).Rows)
 				{
 					dgvPhuTung.Rows.Add(
