@@ -4,10 +4,7 @@
     <Compile Update="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Update="frmKho.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Update="frmPhieuNhap.cs">
+    <Compile Update="frmQuanLyKho.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="frmThemNCC.cs">

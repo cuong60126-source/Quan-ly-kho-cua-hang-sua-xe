@@ -6,24 +6,79 @@ using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
 using System.Drawing.Printing;
-using System.Drawing;
 using System.Windows.Markup;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace btl
 {
-	public partial class frmPhieuNhap : Form
+	public partial class frmQuanLyKho : Form
 	{
 		Classes.DatabaseProcessor dtbase = new Classes.DatabaseProcessor();
+		Classes.Function function = new Classes.Function();
 		private PrintDocument printDocument = new PrintDocument();
 		private DataTable dataIn;
-		public frmPhieuNhap()
+		public frmQuanLyKho()
 		{
 			InitializeComponent();
 		}
 
-		private void frmPhieuNhap_Load(object sender, EventArgs e)
+		private void frmQuanLyKho_Load(object sender, EventArgs e)
 		{
-			string sqlPhieuNhap = "Select pn.MaPhieuNhap, pn.NgayNhap, Sum(ct.SoLuong) As TongSoLuongNhap, Sum(ct.ThanhTien) As ThanhTien, pn.GhiChu, pn.MaNhanVienNhap " +
+			LoadPhuTung();
+			LoadPhieuNhap();
+		}
+
+		// ===== Phụ tùng =====
+
+		private void LoadPhuTung()
+		{
+			string sqlDgvPhuTung = "Select pt.MaPhuTung, pt.TenPhuTung, ncc.TenNhaCungCap As TenNCC, pt.SoLuongTon, pt.DonGiaBan, pt.DonGiaNhap, pt.HanSuDung " +
+				"From PhuTung pt Join NhaCungCap ncc On pt.MaNhaCungCap = ncc.MaNhaCungCap " +
+				"Where pt.TrangThai = 1 " +
+				"Order By pt.MaPhuTung Asc";
+
+			dgvPhuTung.AutoGenerateColumns = false;
+			dgvPhuTung.DataSource = dtbase.ReadData(sqlDgvPhuTung);
+			dgvPhuTung.ReadOnly = true;
+		}
+
+		private void btnNgungSuDung_Click(object sender, EventArgs e)
+		{
+			if (dgvPhuTung.CurrentRow == null)
+			{
+				MessageBox.Show("Chưa chọn phụ tùng!", "Thông báo");
+				return;
+			}
+
+			if (MessageBox.Show("Chắc chắn muốn ngưng sử dụng?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+			{
+				string maPhuTung = dgvPhuTung.CurrentRow.Cells["colMaPhuTung"].Value.ToString();
+
+				string sqlUpdateTrangThai = "Update PhuTung Set TrangThai = 0 Where MaPhuTung = '" + maPhuTung + "'";
+
+				dtbase.ChangeData(sqlUpdateTrangThai);
+
+				LoadPhuTung();
+			}
+		}
+
+		private void txtTimPhuTung_TextChanged(object sender, EventArgs e)
+		{
+			string timPhuTung = txtTimPhuTung.Text;
+
+			string sqlTimPhuTung = "Select pt.MaPhuTung, pt.TenPhuTung, ncc.TenNhaCungCap As TenNCC, pt.SoLuongTon, pt.DonGiaBan, pt.DonGiaNhap, pt.HanSuDung " +
+				"From PhuTung pt Join NhaCungCap ncc On pt.MaNhaCungCap = ncc.MaNhaCungCap " +
+				"Where pt.TrangThai = 1 And (pt.MaPhuTung Like '%" + timPhuTung + "%' Or pt.TenPhuTung Like N'%" + timPhuTung + "%')" +
+				"Order By pt.MaPhuTung Asc";
+
+			dgvPhuTung.DataSource = dtbase.ReadData(sqlTimPhuTung);
+		}
+
+		// ===== Phiếu nhập =====
+
+		private void LoadPhieuNhap()
+		{
+			string sqlPhieuNhap = "Select pn.MaPhieuNhap, pn.NgayNhap, Sum(ct.SoLuongNhap) As TongSoLuongNhap, Sum(ct.ThanhTien) As ThanhTien, pn.GhiChu, pn.MaNhanVienNhap " +
 				"From PhieuNhap pn Join ChiTietPhieuNhap ct On pn.MaPhieuNhap = ct.MaPhieuNhap " +
 				"Group By pn.MaPhieuNhap, pn.NgayNhap, pn.GhiChu, pn.MaNhanVienNhap " +
 				"Order By pn.MaPhieuNhap Asc";
@@ -37,7 +92,7 @@ namespace btl
 			{
 				string maPhieuNhap = dgvPhieuNhap.Rows[0].Cells["colMaPhieuNhap"].Value.ToString();
 
-				string sqlDgvChiTietPhieuNhap = "Select ct.MaPhieuNhap, ct.MaChiTietPhieuNhap, ct.MaPhuTung, ct.SoLuong As SoLuongNhap, ct.DonGiaNhap, ct.ThanhTien, pt.HanSuDung " +
+				string sqlDgvChiTietPhieuNhap = "Select ct.MaPhieuNhap, ct.MaPhuTung, ct.SoLuongNhap, pt.DonGiaNhap, ct.ThanhTien, pt.HanSuDung " +
 				"From PhuTung pt Join ChiTietPhieuNhap ct On pt.MaPhuTung = ct.MaPhuTung " +
 				"Where ct.MaPhieuNhap = '" + maPhieuNhap + "'";
 
@@ -49,7 +104,7 @@ namespace btl
 		{
 			string maPhieuNhap = dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString();
 
-			string sqlDgvChiTietPhieuNhap = "Select ct.MaPhieuNhap, ct.MaChiTietPhieuNhap, ct.MaPhuTung, ct.SoLuong As SoLuongNhap, ct.DonGiaNhap, ct.ThanhTien, pt.HanSuDung " +
+			string sqlDgvChiTietPhieuNhap = "Select ct.MaPhieuNhap, ct.MaPhuTung, ct.SoLuongNhap, pt.DonGiaNhap, ct.ThanhTien, pt.HanSuDung " +
 				"From PhuTung pt Join ChiTietPhieuNhap ct On pt.MaPhuTung = ct.MaPhuTung " +
 				"Where ct.MaPhieuNhap = '" + maPhieuNhap + "'";
 
@@ -76,7 +131,8 @@ namespace btl
 			frmNhapPhieuNhap formNhapPhieuNhap = new frmNhapPhieuNhap(GenerateMaPhieuNhap());
 			formNhapPhieuNhap.ShowDialog();
 
-			frmPhieuNhap_Load(sender, e);
+			LoadPhieuNhap();
+			LoadPhuTung();
 		}
 
 		private void btnSuaPhieuNhap_Click(object sender, EventArgs e)
@@ -92,7 +148,8 @@ namespace btl
 			frmNhapPhieuNhap formNhapPhieuNhap = new frmNhapPhieuNhap(maPhieuNhap);
 			formNhapPhieuNhap.ShowDialog();
 
-			frmPhieuNhap_Load(sender, e);
+			LoadPhieuNhap();
+			LoadPhuTung();
 		}
 
 		private void btnXoaPhieuNhap_Click(object sender, EventArgs e)
@@ -113,14 +170,6 @@ namespace btl
 				{
 					MessageBox.Show("Lỗi khi xóa phiếu: " + ex.Message, "Thông báo");
 				}
-			}
-		}
-
-		private void btnThoat_Click(object sender, EventArgs e)
-		{
-			if (MessageBox.Show("Chắc chắn muốn thoát?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-			{
-				this.Close();
 			}
 		}
 
@@ -214,14 +263,14 @@ namespace btl
 			string maPhieuNhap = dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString();
 
 			string sql = "SELECT pn.MaPhieuNhap, pn.NgayNhap, pn.MaNhanVienNhap, " +
-				 "ncc.TenNCC, pt.MaPhuTung, pt.TenPhuTung, " +
-				 "ct.SoLuong, ct.DonGiaNhap, ct.ThanhTien, ct.HanSuDung " +
+				 "ncc.TenNhaCungCap AS TenNCC, pt.MaPhuTung, pt.TenPhuTung, " +
+				 "ct.SoLuongNhap AS SoLuong, pt.DonGiaNhap, ct.ThanhTien, pt.HanSuDung " +
 				 "FROM PhieuNhap pn " +
 				 "JOIN ChiTietPhieuNhap ct ON pn.MaPhieuNhap = ct.MaPhieuNhap " +
-				 "JOIN NhaCungCap ncc ON ct.MaNCC = ncc.MaNCC " +
 				 "JOIN PhuTung pt ON ct.MaPhuTung = pt.MaPhuTung " +
+				 "JOIN NhaCungCap ncc ON pt.MaNhaCungCap = ncc.MaNhaCungCap " +
 				 "WHERE pn.MaPhieuNhap = '" + maPhieuNhap + "' " +
-				 "ORDER BY ct.MaChiTietPhieuNhap";
+				 "ORDER BY ct.MaPhuTung";
 
 			dataIn = dtbase.ReadData(sql);
 
@@ -241,11 +290,11 @@ namespace btl
 			preview.ShowDialog();
 		}
 
-		private void txtTim_TextChanged(object sender, EventArgs e)
+		private void txtTimPhieuNhap_TextChanged(object sender, EventArgs e)
 		{
 			string timPhieuNhap = txtTimPhieuNhap.Text;
 
-			string sqlTimPhieuNhap = "Select pn.MaPhieuNhap, pn.NgayNhap, Sum(ct.SoLuong) As TongSoLuongNhap, Sum(ct.ThanhTien) As ThanhTien, pn.GhiChu, pn.MaNhanVienNhap " +
+			string sqlTimPhieuNhap = "Select pn.MaPhieuNhap, pn.NgayNhap, Sum(ct.SoLuongNhap) As TongSoLuongNhap, Sum(ct.ThanhTien) As ThanhTien, pn.GhiChu, pn.MaNhanVienNhap " +
 				"From PhieuNhap pn Join ChiTietPhieuNhap ct On pn.MaPhieuNhap = ct.MaPhieuNhap " +
 				"Where pn.MaPhieuNhap Like '%" + timPhieuNhap + "%' " +
 				"Group By pn.MaPhieuNhap, pn.NgayNhap, pn.GhiChu, pn.MaNhanVienNhap " +
@@ -256,11 +305,19 @@ namespace btl
 			{
 				string maPhieuNhap = dgvPhieuNhap.Rows[0].Cells["colMaPhieuNhap"].Value.ToString();
 
-				string sqlChiTietPhieuNhap = "Select pn.MaPhieuNhap, pn.NgayNhap, Sum(ct.SoLuong) As TongSoLuongNhap, Sum(ct.ThanhTien) As ThanhTien, pn.GhiChu, pn.MaNhanVienNhap " +
+				string sqlChiTietPhieuNhap = "Select ct.MaPhieuNhap, ct.MaPhuTung, ct.SoLuongNhap, pt.DonGiaNhap, ct.ThanhTien, pt.HanSuDung " +
 				"From PhuTung pt Join ChiTietPhieuNhap ct On pt.MaPhuTung = ct.MaPhuTung " +
 				"Where ct.MaPhieuNhap = '" + maPhieuNhap + "'";
 
 				dgvChiTietPhieuNhap.DataSource = dtbase.ReadData(sqlChiTietPhieuNhap);
+			}
+		}
+
+		private void btnThoat_Click(object sender, EventArgs e)
+		{
+			if (MessageBox.Show("Chắc chắn muốn thoát?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+			{
+				this.Close();
 			}
 		}
 	}

@@ -32,12 +32,12 @@ namespace btl
 
 			if(dataCheck.Rows.Count > 0)
 			{
-				string sqlDgvPhuTung = "Select pn.MaPhieuNhap, ncc.TenNCC, pn.NgayNhap, pt.MaPhuTung, pt.TenPhuTung, ct.SoLuong As SoLuongNhap, ct.DonGiaNhap, pt.DonGiaBan, ct.ThanhTien, pt.HanSuDung, pn.MaNhanVienNhap, pn.GhiChu " +
+				string sqlDgvPhuTung = "Select pn.MaPhieuNhap, ncc.TenNhaCungCap As TenNCC, pn.NgayNhap, pt.MaPhuTung, pt.TenPhuTung, ct.SoLuongNhap, pt.DonGiaNhap, pt.DonGiaBan, ct.ThanhTien, pt.HanSuDung, pn.MaNhanVienNhap, pn.GhiChu " +
 					"From PhuTung pt Join ChiTietPhieuNhap ct On pt.MaPhuTung = ct.MaPhuTung " +
 					"Join PhieuNhap pn On pn.MaPhieuNhap = ct.MaPhieuNhap " +
-					"Join NhaCungCap ncc On pt.MaNCC = ncc.MaNCC " +
+					"Join NhaCungCap ncc On pt.MaNhaCungCap = ncc.MaNhaCungCap " +
 					"Where pn.MaPhieuNhap = '" + maPhieuNhap + "' " +
-					"Order By ct.MaChiTietPhieuNhap";
+					"Order By ct.MaPhuTung";
 
 				foreach (DataRow data in dtbase.ReadData(sqlDgvPhuTung).Rows)
 				{
@@ -67,7 +67,7 @@ namespace btl
 			txtThanhTien.Enabled = false;
 			dtpNgayNhap.Enabled = false;
 
-			function.AddComboBox(cbNhaCungCap, dtbase.ReadData("Select TenNCC, MaNCC From NhaCungCap"), "TenNCC", "MaNCC");
+			function.AddComboBox(cbNhaCungCap, dtbase.ReadData("Select TenNhaCungCap As TenNCC, MaNhaCungCap As MaNCC From NhaCungCap"), "TenNCC", "MaNCC");
 			cbNhaCungCap.SelectedIndex = -1;
 			function.AddComboBox(cbMaPhuTung, dtbase.ReadData("Select MaPhuTung From PhuTung"), "MaPhuTung", "MaPhuTung");
 			cbMaPhuTung.SelectedIndex = -1;
@@ -107,7 +107,7 @@ namespace btl
 
 			if (form.DialogResult == DialogResult.OK)
 			{
-				function.AddComboBox(cbNhaCungCap, dtbase.ReadData("Select TenNCC, MaNCC From NhaCungCap"), "TenNCC", "MaNCC");
+				function.AddComboBox(cbNhaCungCap, dtbase.ReadData("Select TenNhaCungCap As TenNCC, MaNhaCungCap As MaNCC From NhaCungCap"), "TenNCC", "MaNCC");
 				cbNhaCungCap.SelectedIndex = -1;
 			}
 		}
@@ -123,13 +123,13 @@ namespace btl
 			if (MessageBox.Show("Chắc chắn muốn xóa?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
 			{
 				string tenNCC = cbNhaCungCap.SelectedValue.ToString();
-				string sql = "Delete From NhaCungCap Where MaNCC = '" + tenNCC + "'";
+				string sql = "Delete From NhaCungCap Where MaNhaCungCap = '" + tenNCC + "'";
 
 				dtbase.ChangeData(sql);
 
 				MessageBox.Show("Xóa thành công!", "Thông báo");
 
-				function.AddComboBox(cbNhaCungCap, dtbase.ReadData("Select TenNCC, MaNCC From NhaCungCap"), "TenNCC", "MaNCC");
+				function.AddComboBox(cbNhaCungCap, dtbase.ReadData("Select TenNhaCungCap As TenNCC, MaNhaCungCap As MaNCC From NhaCungCap"), "TenNCC", "MaNCC");
 				cbNhaCungCap.SelectedIndex = -1;
 			}
 		}
@@ -192,6 +192,16 @@ namespace btl
 			{
 				MessageBox.Show("Giá trị số lượng hoặc đơn giá nhập không hợp lệ!", "Thông báo");
 				return;
+			}
+
+			// Mỗi mã phụ tùng chỉ được có 1 dòng trong phiếu (khóa chính MaPhieuNhap + MaPhuTung)
+			foreach (DataGridViewRow row in dgvPhuTung.Rows)
+			{
+				if ((row.Cells["colMaPhuTung"].Value?.ToString() ?? "").Trim() == cbMaPhuTung.Text.Trim())
+				{
+					MessageBox.Show("Phụ tùng đã có trong phiếu, hãy sửa số lượng!", "Thông báo");
+					return;
+				}
 			}
 
 			dgvPhuTung.Rows.Add(
@@ -456,7 +466,7 @@ namespace btl
 				    SELECT X.MaPhuTung, SUM(X.SoLuongCu), SUM(X.SoLuongMoi)
 				    FROM
 				    (
-				        SELECT CT.MaPhuTung, CT.SoLuong AS SoLuongCu, 0 AS SoLuongMoi
+				        SELECT CT.MaPhuTung, CT.SoLuongNhap AS SoLuongCu, 0 AS SoLuongMoi
 				        FROM dbo.ChiTietPhieuNhap CT
 				        WHERE CT.MaPhieuNhap = @MaPhieuNhap
 
@@ -476,8 +486,8 @@ namespace btl
 				      (
 				          SELECT 1
 				          FROM dbo.ChiTietPhieuTiepNhan CTTN
-				          JOIN dbo.DichVu DV ON DV.MaDichVu = CTTN.MaDichVu
-				          WHERE DV.MaPhuTung = CL.MaPhuTung
+				          JOIN dbo.ChiTietDichVu CTDV ON CTDV.MaDichVu = CTTN.MaDichVu
+				          WHERE CTDV.MaPhuTung = CL.MaPhuTung
 				      );
 
 				    IF @Loi IS NOT NULL
@@ -495,7 +505,7 @@ namespace btl
 				    -- 3. Nhà cung cấp phải tồn tại
 				    SELECT TOP 1 @Loi = N'Không tìm thấy nhà cung cấp ' + M.TenNCC + N'!'
 				    FROM @Moi M
-				    WHERE NOT EXISTS (SELECT 1 FROM dbo.NhaCungCap NCC WHERE NCC.TenNCC = M.TenNCC);
+				    WHERE NOT EXISTS (SELECT 1 FROM dbo.NhaCungCap NCC WHERE NCC.TenNhaCungCap = M.TenNCC);
 
 				    IF @Loi IS NOT NULL
 				        THROW 50003, @Loi, 1;
@@ -508,18 +518,18 @@ namespace btl
 				            GhiChu = N'{EscapeSql(ghiChu)}'
 				        WHERE MaPhieuNhap = @MaPhieuNhap;
 				    ELSE
-				        INSERT INTO dbo.PhieuNhap (MaPhieuNhap, NgayNhap, MaNhanVienNhap, GhiChu)
-				        VALUES (@MaPhieuNhap, '{ngayNhapSql}', '{EscapeSql(maNV)}', N'{EscapeSql(ghiChu)}');
+				        INSERT INTO dbo.PhieuNhap (MaPhieuNhap, NgayNhap, MaNhanVienNhap, GhiChu, TongTienNhap)
+				        VALUES (@MaPhieuNhap, '{ngayNhapSql}', '{EscapeSql(maNV)}', N'{EscapeSql(ghiChu)}', 0);
 
 				    -- 5. Phụ tùng chưa có thì tạo mới từ phiếu nhập (tồn = 0, cộng ở bước 6)
-				    INSERT INTO dbo.PhuTung (MaPhuTung, TenPhuTung, MaNCC, HanSuDung, DonGiaNhap, DonGiaBan, SoLuongTon)
-				    SELECT M.MaPhuTung, M.TenPhuTung, NCC.MaNCC, M.HanSuDung, M.DonGiaNhap, M.DonGiaBan, 0
+				    INSERT INTO dbo.PhuTung (MaPhuTung, TenPhuTung, MaNhaCungCap, HanSuDung, DonGiaNhap, DonGiaBan, SoLuongTon, TrangThai)
+				    SELECT M.MaPhuTung, M.TenPhuTung, NCC.MaNCC, M.HanSuDung, M.DonGiaNhap, M.DonGiaBan, 0, 1
 				    FROM @Moi M
 				    CROSS APPLY
 				    (
-				        SELECT TOP 1 N.MaNCC
+				        SELECT TOP 1 N.MaNhaCungCap AS MaNCC
 				        FROM dbo.NhaCungCap N
-				        WHERE N.TenNCC = M.TenNCC
+				        WHERE N.TenNhaCungCap = M.TenNCC
 				    ) NCC
 				    WHERE M.STT = (SELECT MIN(M2.STT) FROM @Moi M2 WHERE M2.MaPhuTung = M.MaPhuTung)
 				      AND NOT EXISTS (SELECT 1 FROM dbo.PhuTung PT WHERE PT.MaPhuTung = M.MaPhuTung);
@@ -533,7 +543,7 @@ namespace btl
 				    -- 7. Phụ tùng chỉ thuộc phiếu này thì cập nhật thông tin theo lưới
 				    UPDATE PT
 				    SET PT.TenPhuTung = M.TenPhuTung,
-				        PT.MaNCC = NCC.MaNCC,
+				        PT.MaNhaCungCap = NCC.MaNCC,
 				        PT.HanSuDung = M.HanSuDung,
 				        PT.DonGiaNhap = M.DonGiaNhap,
 				        PT.DonGiaBan = M.DonGiaBan
@@ -541,9 +551,9 @@ namespace btl
 				    JOIN @Moi M ON M.MaPhuTung = PT.MaPhuTung
 				    CROSS APPLY
 				    (
-				        SELECT TOP 1 N.MaNCC
+				        SELECT TOP 1 N.MaNhaCungCap AS MaNCC
 				        FROM dbo.NhaCungCap N
-				        WHERE N.TenNCC = M.TenNCC
+				        WHERE N.TenNhaCungCap = M.TenNCC
 				    ) NCC
 				    WHERE M.STT = (SELECT MAX(M2.STT) FROM @Moi M2 WHERE M2.MaPhuTung = M.MaPhuTung)
 				      AND NOT EXISTS
@@ -558,8 +568,8 @@ namespace btl
 				    DELETE FROM dbo.ChiTietPhieuNhap
 				    WHERE MaPhieuNhap = @MaPhieuNhap;
 
-				    INSERT INTO dbo.ChiTietPhieuNhap (MaPhieuNhap, MaPhuTung, SoLuong, DonGiaNhap)
-				    SELECT @MaPhieuNhap, M.MaPhuTung, M.SoLuong, M.DonGiaNhap
+				    INSERT INTO dbo.ChiTietPhieuNhap (MaPhieuNhap, MaPhuTung, SoLuongNhap, ThanhTien)
+				    SELECT @MaPhieuNhap, M.MaPhuTung, M.SoLuong, M.SoLuong * M.DonGiaNhap
 				    FROM @Moi M
 				    ORDER BY M.STT;
 
@@ -570,11 +580,11 @@ namespace btl
 				    WHERE CL.SoLuongMoi = 0
 				      AND PT.SoLuongTon = 0
 				      AND NOT EXISTS (SELECT 1 FROM dbo.ChiTietPhieuNhap CT WHERE CT.MaPhuTung = PT.MaPhuTung)
-				      AND NOT EXISTS (SELECT 1 FROM dbo.DichVu DV WHERE DV.MaPhuTung = PT.MaPhuTung);
+				      AND NOT EXISTS (SELECT 1 FROM dbo.ChiTietDichVu CTDV WHERE CTDV.MaPhuTung = PT.MaPhuTung);
 
 				    -- 10. Tính lại tổng tiền phiếu nhập
 				    UPDATE PN
-				    SET PN.TongTien = ISNULL(Tong.TongTien, 0)
+				    SET PN.TongTienNhap = ISNULL(Tong.TongTien, 0)
 				    FROM dbo.PhieuNhap PN
 				    OUTER APPLY
 				    (

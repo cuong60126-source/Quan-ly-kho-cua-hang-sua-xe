@@ -30,7 +30,7 @@ namespace btl
 				return;
 			}
 
-			DataTable data = dtbase.ReadData("Select * From NhaCungCap Where MaNCC = '" + txtMaNCC.Text + "'");
+			DataTable data = dtbase.ReadData("Select * From NhaCungCap Where MaNhaCungCap = '" + txtMaNCC.Text + "'");
 
 			if (data.Rows.Count > 0)
 			{

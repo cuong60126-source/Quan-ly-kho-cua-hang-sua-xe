@@ -58,13 +58,12 @@ CREATE TABLE NhanVien (
     Luong        DECIMAL(18,0)  NOT NULL,
     TenDangNhap  VARCHAR(50)    NOT NULL,
     MatKhau      VARCHAR(64)    NOT NULL,   -- SHA-256 dạng HEX
-    TrangThai    NVARCHAR(20)   NOT NULL,
+    TrangThai    BIT            NOT NULL,
     CONSTRAINT PK_NhanVien PRIMARY KEY (MaNhanVien),
     CONSTRAINT FK_NhanVien_ChucVu FOREIGN KEY (MaChucVu) REFERENCES ChucVu(MaChucVu),
     CONSTRAINT UQ_NhanVien_SoDienThoai UNIQUE (SoDienThoai),
     CONSTRAINT UQ_NhanVien_TenDangNhap UNIQUE (TenDangNhap),
-    CONSTRAINT CK_NhanVien_Luong CHECK (Luong > 0),
-    CONSTRAINT CK_NhanVien_TrangThai CHECK (TrangThai IN (N'Đang làm', N'Nghỉ việc'))
+    CONSTRAINT CK_NhanVien_Luong CHECK (Luong > 0)
 );
 
 CREATE TABLE CaLam (
@@ -124,10 +123,9 @@ CREATE TABLE DichVu (
     TenDichVu        NVARCHAR(150)  NOT NULL,
     MoTa             NVARCHAR(255)  NOT NULL,
     ThanhTienDichVu  DECIMAL(18,0)  NOT NULL,
-    TrangThai        NVARCHAR(20)   NOT NULL,
+    TrangThai        BIT            NOT NULL,
     CONSTRAINT PK_DichVu PRIMARY KEY (MaDichVu),
-    CONSTRAINT CK_DichVu_Gia CHECK (ThanhTienDichVu > 0),
-    CONSTRAINT CK_DichVu_TrangThai CHECK (TrangThai IN (N'Đang áp dụng', N'Ngừng áp dụng'))
+    CONSTRAINT CK_DichVu_Gia CHECK (ThanhTienDichVu > 0)
 );
 
 CREATE TABLE NhaCungCap (
@@ -146,12 +144,11 @@ CREATE TABLE PhuTung (   -- khác NCC hoặc khác hạn sử dụng => mã ph�
     DonGiaBan     DECIMAL(18,0)  NOT NULL,
     SoLuongTon    INT            NOT NULL,
     HanSuDung     DATE           NOT NULL,
-    TrangThai     NVARCHAR(20)   NOT NULL,
+    TrangThai     BIT            NOT NULL,
     CONSTRAINT PK_PhuTung PRIMARY KEY (MaPhuTung),
     CONSTRAINT FK_PhuTung_NhaCungCap FOREIGN KEY (MaNhaCungCap) REFERENCES NhaCungCap(MaNhaCungCap),
     CONSTRAINT CK_PhuTung_Gia CHECK (DonGiaNhap > 0 AND DonGiaBan >= DonGiaNhap),
-    CONSTRAINT CK_PhuTung_SoLuongTon CHECK (SoLuongTon >= 0),
-    CONSTRAINT CK_PhuTung_TrangThai CHECK (TrangThai IN (N'Đang kinh doanh', N'Ngừng kinh doanh'))
+    CONSTRAINT CK_PhuTung_SoLuongTon CHECK (SoLuongTon >= 0)
 );
 
 CREATE TABLE ChiTietDichVu (   -- định mức phụ tùng cho mỗi dịch vụ
@@ -294,28 +291,28 @@ INSERT INTO ChucVuDieuChinh (MaChucVu, MaKhoanDieuChinh) VALUES
 
 -- NhanVien: 22 dòng
 INSERT INTO NhanVien (MaNhanVien, MaChucVu, HoTen, SoDienThoai, Luong, TenDangNhap, MatKhau, TrangThai) VALUES
-    ('NV001', 'CV01', N'Trần Văn Nam', '0351104489', 15300000, 'namtv', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV002', 'CV02', N'Tô Công Phong', '0398728274', 11700000, 'phongtc', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV003', 'CV02', N'Phạm Thành Trung', '0908129955', 11100000, 'trungpt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV004', 'CV02', N'Lê Hữu Tuấn', '0965357935', 11400000, 'tuanlh', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV005', 'CV03', N'Tô Ngọc Toàn', '0707366128', 10000000, 'toantn', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV006', 'CV03', N'Dương Trọng Trung', '0986066241', 9400000, 'trungdt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV007', 'CV03', N'Lý Gia Nam', '0895926479', 9300000, 'namlg', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV008', 'CV03', N'Mai Tiến Trung', '0703496642', 9800000, 'trungmt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV009', 'CV03', N'Dương Tiến Tùng', '0931244526', 9000000, 'tungdt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV010', 'CV03', N'Vũ Minh Phong', '0322254771', 9100000, 'phongvm', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV011', 'CV04', N'Đinh Tiến Huy', '0779757526', 6600000, 'huydt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV012', 'CV04', N'Dương Ngọc Đạt', '0865087044', 6200000, 'datdn', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV013', 'CV04', N'Phan Văn Nam', '0946631915', 7000000, 'nampv', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV014', 'CV04', N'Trần Quang Hải', '0831825841', 7000000, 'haitq', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV015', 'CV05', N'Mai Ngọc Hà', '0791783439', 7700000, 'hamn', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV016', 'CV05', N'Nguyễn Khánh Hà', '0362914757', 7600000, 'hank', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV017', 'CV05', N'Vũ Phương Linh', '0856188510', 8200000, 'linhvp', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV018', 'CV06', N'Đinh Đức Sơn', '0850113539', 7800000, 'sondd', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV019', 'CV06', N'Lê Thị Thảo', '0776909347', 8300000, 'thaolt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV020', 'CV07', N'Đặng Bảo Vy', '0399685154', 9100000, 'vydb', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV021', 'CV07', N'Mai Thu Thảo', '0831125191', 8500000, 'thaomt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Đang làm'),
-    ('NV022', 'CV03', N'Đặng Thành Long', '0774040369', 10000000, 'longdt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', N'Nghỉ việc');
+    ('NV001', 'CV01', N'Trần Văn Nam', '0351104489', 15300000, 'namtv', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV002', 'CV02', N'Tô Công Phong', '0398728274', 11700000, 'phongtc', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV003', 'CV02', N'Phạm Thành Trung', '0908129955', 11100000, 'trungpt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV004', 'CV02', N'Lê Hữu Tuấn', '0965357935', 11400000, 'tuanlh', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV005', 'CV03', N'Tô Ngọc Toàn', '0707366128', 10000000, 'toantn', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV006', 'CV03', N'Dương Trọng Trung', '0986066241', 9400000, 'trungdt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV007', 'CV03', N'Lý Gia Nam', '0895926479', 9300000, 'namlg', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV008', 'CV03', N'Mai Tiến Trung', '0703496642', 9800000, 'trungmt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV009', 'CV03', N'Dương Tiến Tùng', '0931244526', 9000000, 'tungdt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV010', 'CV03', N'Vũ Minh Phong', '0322254771', 9100000, 'phongvm', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV011', 'CV04', N'Đinh Tiến Huy', '0779757526', 6600000, 'huydt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV012', 'CV04', N'Dương Ngọc Đạt', '0865087044', 6200000, 'datdn', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV013', 'CV04', N'Phan Văn Nam', '0946631915', 7000000, 'nampv', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV014', 'CV04', N'Trần Quang Hải', '0831825841', 7000000, 'haitq', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV015', 'CV05', N'Mai Ngọc Hà', '0791783439', 7700000, 'hamn', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV016', 'CV05', N'Nguyễn Khánh Hà', '0362914757', 7600000, 'hank', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV017', 'CV05', N'Vũ Phương Linh', '0856188510', 8200000, 'linhvp', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV018', 'CV06', N'Đinh Đức Sơn', '0850113539', 7800000, 'sondd', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV019', 'CV06', N'Lê Thị Thảo', '0776909347', 8300000, 'thaolt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV020', 'CV07', N'Đặng Bảo Vy', '0399685154', 9100000, 'vydb', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV021', 'CV07', N'Mai Thu Thảo', '0831125191', 8500000, 'thaomt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 1),
+    ('NV022', 'CV03', N'Đặng Thành Long', '0774040369', 10000000, 'longdt', '8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92', 0);
 
 -- CaLam: 3 dòng
 INSERT INTO CaLam (MaCaLam, ThoiGianCaLam, ThoiGianBatDau, ThoiGianKetThuc) VALUES
@@ -3508,28 +3505,28 @@ INSERT INTO ChiTietPhanCong (MaNhanVien, MaXe, ThoiGianBatDau, ThoiGianHoanThanh
 
 -- DichVu: 22 dòng
 INSERT INTO DichVu (MaDichVu, TenDichVu, MoTa, ThanhTienDichVu, TrangThai) VALUES
-    ('DV01', N'Thay nhớt máy (Castrol Power1)', N'Xả nhớt cũ, thay nhớt mới, kiểm tra rò rỉ', 140000, N'Đang áp dụng'),
-    ('DV02', N'Thay nhớt máy cao cấp (Motul 3100)', N'Thay nhớt tổng hợp cao cấp cho xe chạy nhiều', 160000, N'Đang áp dụng'),
-    ('DV03', N'Thay nhớt hộp số (xe tay ga)', N'Thay nhớt láp cho xe tay ga', 50000, N'Đang áp dụng'),
-    ('DV04', N'Bảo dưỡng định kỳ xe tay ga', N'Vệ sinh nồi, thay lọc gió, thay bugi, kiểm tra tổng quát', 395000, N'Đang áp dụng'),
-    ('DV05', N'Bảo dưỡng định kỳ xe số - côn tay', N'Thay lọc gió, thay bugi, căng chỉnh xích, kiểm tra tổng quát', 275000, N'Đang áp dụng'),
-    ('DV06', N'Vệ sinh kim phun - buồng đốt', N'Vệ sinh kim phun, họng ga và buồng đốt', 200000, N'Đang áp dụng'),
-    ('DV07', N'Thay má phanh trước', N'Thay má phanh trước, vệ sinh cụm phanh', 120000, N'Đang áp dụng'),
-    ('DV08', N'Thay má phanh sau', N'Thay má phanh sau, căng chỉnh phanh', 105000, N'Đang áp dụng'),
-    ('DV09', N'Thay lốp trước xe tay ga', N'Tháo bánh, thay lốp trước, cân chỉnh', 690000, N'Đang áp dụng'),
-    ('DV10', N'Thay lốp sau xe tay ga', N'Tháo bánh, thay lốp sau, cân chỉnh', 770000, N'Đang áp dụng'),
-    ('DV11', N'Thay lốp trước xe số', N'Tháo bánh, thay lốp trước xe số', 350000, N'Đang áp dụng'),
-    ('DV12', N'Thay lốp sau xe số', N'Tháo bánh, thay lốp sau xe số', 410000, N'Đang áp dụng'),
-    ('DV13', 'Thay bugi', N'Thay bugi mới, kiểm tra đánh lửa', 85000, N'Đang áp dụng'),
-    ('DV14', N'Thay dây curoa (xe tay ga)', N'Thay dây curoa, vệ sinh bộ truyền động', 370000, N'Đang áp dụng'),
-    ('DV15', N'Thay ắc quy', N'Thay ắc quy mới, kiểm tra sạc', 380000, N'Đang áp dụng'),
-    ('DV16', N'Thay bộ nhông xích đĩa (xe số)', N'Thay trọn bộ nhông, xích, đĩa', 430000, N'Đang áp dụng'),
-    ('DV17', N'Thay bộ nhông xích đĩa (xe côn tay)', N'Thay trọn bộ nhông, xích, đĩa xe côn tay', 660000, N'Đang áp dụng'),
-    ('DV18', N'Thay nước làm mát', N'Xả và thay nước làm mát két nước', 115000, N'Đang áp dụng'),
-    ('DV19', N'Thay dầu phanh', N'Xả gió và thay dầu phanh đĩa', 105000, N'Đang áp dụng'),
-    ('DV20', N'Rửa xe - dưỡng bóng', N'Rửa xe bọt tuyết, xịt dưỡng nhựa nhám', 40000, N'Đang áp dụng'),
-    ('DV21', N'Vá lốp không săm', N'Vá lốp bằng nấm vá, bơm hơi kiểm tra', 50000, N'Đang áp dụng'),
-    ('DV22', N'Sơn dặm - đánh bóng dàn áo', N'Sơn dặm vết xước, đánh bóng dàn áo', 350000, N'Ngừng áp dụng');
+    ('DV01', N'Thay nhớt máy (Castrol Power1)', N'Xả nhớt cũ, thay nhớt mới, kiểm tra rò rỉ', 140000, 1),
+    ('DV02', N'Thay nhớt máy cao cấp (Motul 3100)', N'Thay nhớt tổng hợp cao cấp cho xe chạy nhiều', 160000, 1),
+    ('DV03', N'Thay nhớt hộp số (xe tay ga)', N'Thay nhớt láp cho xe tay ga', 50000, 1),
+    ('DV04', N'Bảo dưỡng định kỳ xe tay ga', N'Vệ sinh nồi, thay lọc gió, thay bugi, kiểm tra tổng quát', 395000, 1),
+    ('DV05', N'Bảo dưỡng định kỳ xe số - côn tay', N'Thay lọc gió, thay bugi, căng chỉnh xích, kiểm tra tổng quát', 275000, 1),
+    ('DV06', N'Vệ sinh kim phun - buồng đốt', N'Vệ sinh kim phun, họng ga và buồng đốt', 200000, 1),
+    ('DV07', N'Thay má phanh trước', N'Thay má phanh trước, vệ sinh cụm phanh', 120000, 1),
+    ('DV08', N'Thay má phanh sau', N'Thay má phanh sau, căng chỉnh phanh', 105000, 1),
+    ('DV09', N'Thay lốp trước xe tay ga', N'Tháo bánh, thay lốp trước, cân chỉnh', 690000, 1),
+    ('DV10', N'Thay lốp sau xe tay ga', N'Tháo bánh, thay lốp sau, cân chỉnh', 770000, 1),
+    ('DV11', N'Thay lốp trước xe số', N'Tháo bánh, thay lốp trước xe số', 350000, 1),
+    ('DV12', N'Thay lốp sau xe số', N'Tháo bánh, thay lốp sau xe số', 410000, 1),
+    ('DV13', 'Thay bugi', N'Thay bugi mới, kiểm tra đánh lửa', 85000, 1),
+    ('DV14', N'Thay dây curoa (xe tay ga)', N'Thay dây curoa, vệ sinh bộ truyền động', 370000, 1),
+    ('DV15', N'Thay ắc quy', N'Thay ắc quy mới, kiểm tra sạc', 380000, 1),
+    ('DV16', N'Thay bộ nhông xích đĩa (xe số)', N'Thay trọn bộ nhông, xích, đĩa', 430000, 1),
+    ('DV17', N'Thay bộ nhông xích đĩa (xe côn tay)', N'Thay trọn bộ nhông, xích, đĩa xe côn tay', 660000, 1),
+    ('DV18', N'Thay nước làm mát', N'Xả và thay nước làm mát két nước', 115000, 1),
+    ('DV19', N'Thay dầu phanh', N'Xả gió và thay dầu phanh đĩa', 105000, 1),
+    ('DV20', N'Rửa xe - dưỡng bóng', N'Rửa xe bọt tuyết, xịt dưỡng nhựa nhám', 40000, 1),
+    ('DV21', N'Vá lốp không săm', N'Vá lốp bằng nấm vá, bơm hơi kiểm tra', 50000, 1),
+    ('DV22', N'Sơn dặm - đánh bóng dàn áo', N'Sơn dặm vết xước, đánh bóng dàn áo', 350000, 0);
 
 -- NhaCungCap: 8 dòng
 INSERT INTO NhaCungCap (MaNhaCungCap, TenNhaCungCap, SoDienThoai, DiaChi) VALUES
@@ -3544,36 +3541,36 @@ INSERT INTO NhaCungCap (MaNhaCungCap, TenNhaCungCap, SoDienThoai, DiaChi) VALUES
 
 -- PhuTung: 30 dòng
 INSERT INTO PhuTung (MaPhuTung, MaNhaCungCap, TenPhuTung, DonGiaNhap, DonGiaBan, SoLuongTon, HanSuDung, TrangThai) VALUES
-    ('PT001', 'NCC02', N'Nhớt Castrol Power1 4T 10W-40 0.8L', 95000, 125000, 24, '2028-06-30', N'Đang kinh doanh'),
-    ('PT002', 'NCC06', N'Nhớt Castrol Power1 4T 10W-40 0.8L', 92000, 125000, 23, '2028-12-31', N'Đang kinh doanh'),
-    ('PT003', 'NCC02', N'Nhớt Motul 3100 Gold 4T 10W-40 0.8L', 108000, 145000, 21, '2028-09-30', N'Đang kinh doanh'),
-    ('PT004', 'NCC01', N'Nhớt hộp số Honda 120ml', 22000, 35000, 14, '2028-03-31', N'Đang kinh doanh'),
-    ('PT005', 'NCC01', N'Lọc gió Honda Vision', 85000, 120000, 18, '2030-12-31', N'Đang kinh doanh'),
-    ('PT006', 'NCC07', N'Lọc gió Yamaha Sirius/Exciter', 80000, 115000, 18, '2030-12-31', N'Đang kinh doanh'),
-    ('PT007', 'NCC05', 'Bugi NGK CPR8EA-9', 45000, 65000, 20, '2031-12-31', N'Đang kinh doanh'),
-    ('PT008', 'NCC05', 'Bugi Denso U24EPR9', 42000, 60000, 20, '2031-12-31', N'Đang kinh doanh'),
-    ('PT009', 'NCC05', N'Má phanh trước Elig', 55000, 80000, 15, '2031-06-30', N'Đang kinh doanh'),
-    ('PT010', 'NCC05', N'Má phanh sau Elig', 45000, 65000, 20, '2031-06-30', N'Đang kinh doanh'),
-    ('PT011', 'NCC03', N'Lốp Michelin City Grip 2 80/90-14', 520000, 650000, 15, '2030-06-30', N'Đang kinh doanh'),
-    ('PT012', 'NCC03', N'Lốp Michelin City Grip 2 90/90-14', 580000, 720000, 18, '2030-06-30', N'Đang kinh doanh'),
-    ('PT013', 'NCC03', N'Lốp IRC 70/90-17', 250000, 320000, 12, '2030-06-30', N'Đang kinh doanh'),
-    ('PT014', 'NCC03', N'Lốp IRC 80/90-17', 290000, 370000, 16, '2030-06-30', N'Đang kinh doanh'),
-    ('PT015', 'NCC06', N'Dây curoa Bando Honda Vision/Lead', 220000, 290000, 18, '2030-12-31', N'Đang kinh doanh'),
-    ('PT016', 'NCC07', N'Dây curoa Yamaha Janus/Grande', 230000, 300000, 14, '2030-12-31', N'Đang kinh doanh'),
-    ('PT017', 'NCC04', N'Ắc quy GS GTZ5S 12V-3.5Ah', 280000, 360000, 18, '2027-12-31', N'Đang kinh doanh'),
-    ('PT018', 'NCC04', N'Ắc quy Đồng Nai GTZ6V 12V-5Ah', 320000, 410000, 12, '2027-12-31', N'Đang kinh doanh'),
-    ('PT019', 'NCC06', N'Bộ nhông xích đĩa DID Wave/Future', 280000, 360000, 19, '2031-12-31', N'Đang kinh doanh'),
-    ('PT020', 'NCC07', N'Bộ nhông xích đĩa Recto Exciter/Winner', 450000, 580000, 11, '2031-12-31', N'Đang kinh doanh'),
-    ('PT021', 'NCC08', N'Dung dịch vệ sinh kim phun Liqui Moly 300ml', 110000, 150000, 16, '2028-10-31', N'Đang kinh doanh'),
-    ('PT022', 'NCC08', N'Dung dịch vệ sinh nồi RTV 400ml', 65000, 90000, 13, '2028-08-31', N'Đang kinh doanh'),
-    ('PT023', 'NCC01', N'Nước làm mát Honda 1L', 60000, 85000, 15, '2029-03-31', N'Đang kinh doanh'),
-    ('PT024', 'NCC02', N'Dầu phanh Castrol DOT4 250ml', 55000, 75000, 16, '2028-05-31', N'Đang kinh doanh'),
-    ('PT025', 'NCC01', N'Lọc gió Honda Air Blade/Lead', 95000, 130000, 19, '2030-12-31', N'Đang kinh doanh'),
-    ('PT026', 'NCC06', 'Bugi NGK CPR8EA-9', 43000, 65000, 13, '2031-12-31', N'Đang kinh doanh'),
-    ('PT027', 'NCC01', N'Má phanh trước Honda chính hãng', 90000, 125000, 9, '2031-06-30', N'Đang kinh doanh'),
-    ('PT028', 'NCC07', N'Nước làm mát Yamaha 1L', 58000, 80000, 18, '2029-06-30', N'Đang kinh doanh'),
-    ('PT029', 'NCC07', N'Nhớt Yamalube 4AT 10W-40 0.8L', 88000, 115000, 15, '2028-11-30', N'Đang kinh doanh'),
-    ('PT030', 'NCC06', N'Đèn pha LED Honda Vision', 350000, 450000, 6, '2030-12-31', N'Ngừng kinh doanh');
+    ('PT001', 'NCC02', N'Nhớt Castrol Power1 4T 10W-40 0.8L', 95000, 125000, 24, '2028-06-30', 1),
+    ('PT002', 'NCC06', N'Nhớt Castrol Power1 4T 10W-40 0.8L', 92000, 125000, 23, '2028-12-31', 1),
+    ('PT003', 'NCC02', N'Nhớt Motul 3100 Gold 4T 10W-40 0.8L', 108000, 145000, 21, '2028-09-30', 1),
+    ('PT004', 'NCC01', N'Nhớt hộp số Honda 120ml', 22000, 35000, 14, '2028-03-31', 1),
+    ('PT005', 'NCC01', N'Lọc gió Honda Vision', 85000, 120000, 18, '2030-12-31', 1),
+    ('PT006', 'NCC07', N'Lọc gió Yamaha Sirius/Exciter', 80000, 115000, 18, '2030-12-31', 1),
+    ('PT007', 'NCC05', 'Bugi NGK CPR8EA-9', 45000, 65000, 20, '2031-12-31', 1),
+    ('PT008', 'NCC05', 'Bugi Denso U24EPR9', 42000, 60000, 20, '2031-12-31', 1),
+    ('PT009', 'NCC05', N'Má phanh trước Elig', 55000, 80000, 15, '2031-06-30', 1),
+    ('PT010', 'NCC05', N'Má phanh sau Elig', 45000, 65000, 20, '2031-06-30', 1),
+    ('PT011', 'NCC03', N'Lốp Michelin City Grip 2 80/90-14', 520000, 650000, 15, '2030-06-30', 1),
+    ('PT012', 'NCC03', N'Lốp Michelin City Grip 2 90/90-14', 580000, 720000, 18, '2030-06-30', 1),
+    ('PT013', 'NCC03', N'Lốp IRC 70/90-17', 250000, 320000, 12, '2030-06-30', 1),
+    ('PT014', 'NCC03', N'Lốp IRC 80/90-17', 290000, 370000, 16, '2030-06-30', 1),
+    ('PT015', 'NCC06', N'Dây curoa Bando Honda Vision/Lead', 220000, 290000, 18, '2030-12-31', 1),
+    ('PT016', 'NCC07', N'Dây curoa Yamaha Janus/Grande', 230000, 300000, 14, '2030-12-31', 1),
+    ('PT017', 'NCC04', N'Ắc quy GS GTZ5S 12V-3.5Ah', 280000, 360000, 18, '2027-12-31', 1),
+    ('PT018', 'NCC04', N'Ắc quy Đồng Nai GTZ6V 12V-5Ah', 320000, 410000, 12, '2027-12-31', 1),
+    ('PT019', 'NCC06', N'Bộ nhông xích đĩa DID Wave/Future', 280000, 360000, 19, '2031-12-31', 1),
+    ('PT020', 'NCC07', N'Bộ nhông xích đĩa Recto Exciter/Winner', 450000, 580000, 11, '2031-12-31', 1),
+    ('PT021', 'NCC08', N'Dung dịch vệ sinh kim phun Liqui Moly 300ml', 110000, 150000, 16, '2028-10-31', 1),
+    ('PT022', 'NCC08', N'Dung dịch vệ sinh nồi RTV 400ml', 65000, 90000, 13, '2028-08-31', 1),
+    ('PT023', 'NCC01', N'Nước làm mát Honda 1L', 60000, 85000, 15, '2029-03-31', 1),
+    ('PT024', 'NCC02', N'Dầu phanh Castrol DOT4 250ml', 55000, 75000, 16, '2028-05-31', 1),
+    ('PT025', 'NCC01', N'Lọc gió Honda Air Blade/Lead', 95000, 130000, 19, '2030-12-31', 1),
+    ('PT026', 'NCC06', 'Bugi NGK CPR8EA-9', 43000, 65000, 13, '2031-12-31', 1),
+    ('PT027', 'NCC01', N'Má phanh trước Honda chính hãng', 90000, 125000, 9, '2031-06-30', 1),
+    ('PT028', 'NCC07', N'Nước làm mát Yamaha 1L', 58000, 80000, 18, '2029-06-30', 1),
+    ('PT029', 'NCC07', N'Nhớt Yamalube 4AT 10W-40 0.8L', 88000, 115000, 15, '2028-11-30', 1),
+    ('PT030', 'NCC06', N'Đèn pha LED Honda Vision', 350000, 450000, 6, '2030-12-31', 0);
 
 -- ChiTietDichVu: 22 dòng
 INSERT INTO ChiTietDichVu (MaDichVu, MaPhuTung, SoLuong) VALUES
@@ -4218,7 +4215,7 @@ ORDER BY Nam, Thang;
 -- 3. Phụ tùng đang kinh doanh sắp hết hàng (tồn <= 5)
 SELECT pt.MaPhuTung, pt.TenPhuTung, ncc.TenNhaCungCap, pt.SoLuongTon, pt.HanSuDung
 FROM PhuTung pt JOIN NhaCungCap ncc ON ncc.MaNhaCungCap = pt.MaNhaCungCap
-WHERE pt.TrangThai = N'Đang kinh doanh' AND pt.SoLuongTon <= 5
+WHERE pt.TrangThai = 1 AND pt.SoLuongTon <= 5
 ORDER BY pt.SoLuongTon;
 
 -- 4. Tổng giờ làm thực tế tháng 10/2026 theo nhân viên
