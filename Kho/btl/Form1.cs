@@ -175,7 +175,7 @@ namespace btl
 				return;
 			}
 
-			if(Convert.ToDecimal(txtDonGiaNhap.Text) >= Convert.ToDecimal(txtDonGiaBan.Text))
+			if(Convert.ToDecimal(txtDonGiaBan.Text) <= 0)
 			{
 				MessageBox.Show("Giá bán không hợp lệ!", "Thông báo");
 					return;
@@ -200,6 +200,15 @@ namespace btl
 				if ((row.Cells["colMaPhuTung"].Value?.ToString() ?? "").Trim() == cbMaPhuTung.Text.Trim())
 				{
 					MessageBox.Show("Phụ tùng đã có trong phiếu, hãy sửa số lượng!", "Thông báo");
+					return;
+				}
+			}
+
+			// Giá thị trường giảm thì được bán thấp hơn giá nhập, chỉ cảnh báo để tránh gõ nhầm
+			if (Convert.ToDecimal(txtDonGiaBan.Text) < Convert.ToDecimal(txtDonGiaNhap.Text))
+			{
+				if (MessageBox.Show("Giá bán thấp hơn đơn giá nhập. Vẫn thêm?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
+				{
 					return;
 				}
 			}
@@ -257,6 +266,29 @@ namespace btl
 		private void cbNhaCungCap_TextChanged(object sender, EventArgs e)
 		{
 			btnXoaNCC.Enabled = true;
+		}
+
+		// Chọn mã phụ tùng có sẵn trong danh sách thì tự điền thông tin đang lưu trong database
+		private void cbMaPhuTung_SelectionChangeCommitted(object sender, EventArgs e)
+		{
+			string maPhuTung = cbMaPhuTung.SelectedValue?.ToString() ?? "";
+
+			string sqlPhuTung = "Select TenPhuTung, MaNhaCungCap, HanSuDung, DonGiaNhap, DonGiaBan " +
+				"From PhuTung " +
+				"Where MaPhuTung = '" + EscapeSql(maPhuTung) + "'";
+
+			DataTable data = dtbase.ReadData(sqlPhuTung);
+
+			if (data.Rows.Count == 0)
+			{
+				return;
+			}
+
+			cbNhaCungCap.SelectedValue = data.Rows[0]["MaNhaCungCap"].ToString();
+			txtTenPhuTung.Text = data.Rows[0]["TenPhuTung"].ToString();
+			dtpHanSuDung.Value = Convert.ToDateTime(data.Rows[0]["HanSuDung"]);
+			txtDonGiaNhap.Text = Convert.ToDecimal(data.Rows[0]["DonGiaNhap"]).ToString("0.##");
+			txtDonGiaBan.Text = Convert.ToDecimal(data.Rows[0]["DonGiaBan"]).ToString("0.##");
 		}
 
 		private void dgvPhuTung_CellClick(object sender, DataGridViewCellEventArgs e)

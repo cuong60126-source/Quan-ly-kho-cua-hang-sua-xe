@@ -24,6 +24,8 @@ namespace btl
 
 		private void frmQuanLyKho_Load(object sender, EventArgs e)
 		{
+			function.NumberOnly(txtDonGiaBanMoi);
+
 			LoadPhuTung();
 			LoadPhieuNhap();
 		}
@@ -62,6 +64,120 @@ namespace btl
 			}
 		}
 
+		private void btnDieuChinhSoLuong_Click(object sender, EventArgs e)
+		{
+			if (dgvPhuTung.CurrentRow == null)
+			{
+				MessageBox.Show("Chưa chọn phụ tùng!", "Thông báo");
+				return;
+			}
+
+			int soLuongDieuChinh = Convert.ToInt32(nudSoLuongDieuChinh.Value);
+
+			if (soLuongDieuChinh == 0)
+			{
+				MessageBox.Show("Số lượng điều chỉnh phải khác 0!", "Thông báo");
+				return;
+			}
+
+			string maPhuTung = dgvPhuTung.CurrentRow.Cells["colMaPhuTung"].Value.ToString();
+			int soLuongTon = Convert.ToInt32(dgvPhuTung.CurrentRow.Cells["colSoLuongTon"].Value);
+			int soLuongTonMoi = soLuongTon + soLuongDieuChinh;
+
+			if (soLuongTonMoi < 0)
+			{
+				MessageBox.Show("Số lượng tồn sau điều chỉnh không được âm!", "Thông báo");
+				return;
+			}
+
+			if (MessageBox.Show("Điều chỉnh tồn " + maPhuTung + ": " + soLuongTon + " → " + soLuongTonMoi + "?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+			{
+				try
+				{
+					string sqlDieuChinhSoLuong = "Update PhuTung Set SoLuongTon = SoLuongTon + (" + soLuongDieuChinh + ") Where MaPhuTung = '" + maPhuTung + "'";
+
+					dtbase.ChangeData(sqlDieuChinhSoLuong);
+
+					nudSoLuongDieuChinh.Value = 0;
+
+					LoadPhuTung();
+				}
+				catch (Exception ex)
+				{
+					MessageBox.Show("Lỗi khi điều chỉnh tồn: " + ex.Message, "Thông báo");
+				}
+			}
+		}
+
+		// Chọn phụ tùng thì điền sẵn giá bán hiện tại để sửa
+		private void dgvPhuTung_CellClick(object sender, DataGridViewCellEventArgs e)
+		{
+			if (e.RowIndex < 0)
+			{
+				return;
+			}
+
+			txtDonGiaBanMoi.Text = Convert.ToDecimal(dgvPhuTung.Rows[e.RowIndex].Cells["colDonGiaBan"].Value).ToString("0.##");
+		}
+
+		private void btnDieuChinhGiaBan_Click(object sender, EventArgs e)
+		{
+			if (dgvPhuTung.CurrentRow == null)
+			{
+				MessageBox.Show("Chưa chọn phụ tùng!", "Thông báo");
+				return;
+			}
+
+			if (txtDonGiaBanMoi.Text.Trim() == "")
+			{
+				MessageBox.Show("Chưa nhập giá bán mới!", "Thông báo");
+				return;
+			}
+
+			string maPhuTung = dgvPhuTung.CurrentRow.Cells["colMaPhuTung"].Value.ToString();
+			decimal donGiaNhap = Convert.ToDecimal(dgvPhuTung.CurrentRow.Cells["colDonGiaNhap"].Value);
+			decimal donGiaBan = Convert.ToDecimal(dgvPhuTung.CurrentRow.Cells["colDonGiaBan"].Value);
+			decimal donGiaBanMoi = Convert.ToDecimal(txtDonGiaBanMoi.Text);
+
+			if (donGiaBanMoi == donGiaBan)
+			{
+				MessageBox.Show("Giá bán mới phải khác giá bán hiện tại!", "Thông báo");
+				return;
+			}
+
+			if (donGiaBanMoi <= 0)
+			{
+				MessageBox.Show("Giá bán không hợp lệ!", "Thông báo");
+				return;
+			}
+
+			string xacNhan = "Điều chỉnh giá bán " + maPhuTung + ": " + donGiaBan.ToString("N0") + " → " + donGiaBanMoi.ToString("N0") + "?";
+
+			// Giá thị trường giảm thì được bán thấp hơn giá nhập, chỉ cảnh báo để tránh gõ nhầm
+			if (donGiaBanMoi < donGiaNhap)
+			{
+				xacNhan = "Giá bán thấp hơn đơn giá nhập (" + donGiaNhap.ToString("N0") + ")!\n" + xacNhan;
+			}
+
+			if (MessageBox.Show(xacNhan, "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+			{
+				try
+				{
+					string sqlDieuChinhGiaBan = "Update PhuTung Set DonGiaBan = " + donGiaBanMoi.ToString("0") + " Where MaPhuTung = '" + maPhuTung + "'";
+
+					dtbase.ChangeData(sqlDieuChinhGiaBan);
+
+					txtDonGiaBanMoi.Clear();
+
+					LoadPhuTung();
+				}
+				catch (Exception ex)
+				{
+					MessageBox.Show("Lỗi khi điều chỉnh giá bán: " + ex.Message, "Thông báo");
+				}
+			}
+		}
+
 		private void txtTimPhuTung_TextChanged(object sender, EventArgs e)
 		{
 			string timPhuTung = txtTimPhuTung.Text;
@@ -97,6 +213,12 @@ namespace btl
 				"Where ct.MaPhieuNhap = '" + maPhieuNhap + "'";
 
 				dgvChiTietPhieuNhap.DataSource = dtbase.ReadData(sqlDgvChiTietPhieuNhap);
+
+				CapNhatNutPhieuNhap(maPhieuNhap);
+			}
+			else
+			{
+				CapNhatNutPhieuNhap("");
 			}
 		}
 
@@ -109,6 +231,26 @@ namespace btl
 				"Where ct.MaPhieuNhap = '" + maPhieuNhap + "'";
 
 			dgvChiTietPhieuNhap.DataSource = dtbase.ReadData(sqlDgvChiTietPhieuNhap);
+
+			CapNhatNutPhieuNhap(maPhieuNhap);
+		}
+
+		// Phiếu có phụ tùng đã được đưa vào dịch vụ (ChiTietDichVu) thì không được sửa/xóa
+		private bool PhieuNhapDaDungTrongDichVu(string maPhieuNhap)
+		{
+			string sqlCheck = "Select ct.MaPhuTung " +
+				"From ChiTietPhieuNhap ct Join ChiTietDichVu ctdv On ct.MaPhuTung = ctdv.MaPhuTung " +
+				"Where ct.MaPhieuNhap = '" + maPhieuNhap + "'";
+
+			return dtbase.ReadData(sqlCheck).Rows.Count > 0;
+		}
+
+		private void CapNhatNutPhieuNhap(string maPhieuNhap)
+		{
+			bool choPhep = maPhieuNhap != "" && !PhieuNhapDaDungTrongDichVu(maPhieuNhap);
+
+			btnSuaPhieuNhap.Enabled = choPhep;
+			btnXoaPhieuNhap.Enabled = choPhep;
 		}
 
 		private string GenerateMaPhieuNhap()
@@ -145,6 +287,12 @@ namespace btl
 
 			string maPhieuNhap = dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString();
 
+			if (PhieuNhapDaDungTrongDichVu(maPhieuNhap))
+			{
+				MessageBox.Show("Phiếu nhập có phụ tùng đã được dùng trong dịch vụ, không thể sửa!", "Thông báo");
+				return;
+			}
+
 			frmNhapPhieuNhap formNhapPhieuNhap = new frmNhapPhieuNhap(maPhieuNhap);
 			formNhapPhieuNhap.ShowDialog();
 
@@ -160,11 +308,110 @@ namespace btl
 				return;
 			}
 
+			string maPhieuNhap = dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString();
+
+			if (PhieuNhapDaDungTrongDichVu(maPhieuNhap))
+			{
+				MessageBox.Show("Phiếu nhập có phụ tùng đã được dùng trong dịch vụ, không thể xóa!", "Thông báo");
+				return;
+			}
+
 			if (MessageBox.Show("Chắc chắn muốn xóa phiếu nhập?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
 			{
 				try
 				{
+					// Cả phiếu được xóa trong 1 transaction: lỗi ở bất kỳ bước nào thì không xóa gì cả.
+					string sqlXoaPhieuNhap = $"""
+					SET XACT_ABORT ON;
 
+					BEGIN TRY
+					    BEGIN TRANSACTION;
+
+					    DECLARE @MaPhieuNhap VARCHAR(10) = '{maPhieuNhap}';
+					    DECLARE @Loi NVARCHAR(400);
+
+					    -- 1. Phụ tùng đã được đưa vào dịch vụ thì không được xóa phiếu
+					    IF EXISTS
+					    (
+					        SELECT 1
+					        FROM dbo.ChiTietPhieuNhap CT
+					        JOIN dbo.ChiTietDichVu CTDV ON CTDV.MaPhuTung = CT.MaPhuTung
+					        WHERE CT.MaPhieuNhap = @MaPhieuNhap
+					    )
+					        THROW 50001, N'Phiếu nhập có phụ tùng đã được dùng trong dịch vụ, không thể xóa!', 1;
+
+					    -- 2. Phụ tùng chỉ thuộc phiếu này mà tồn khác số lượng nhập => đã điều chỉnh tồn bằng tay
+					    SELECT TOP 1 @Loi = N'Phụ tùng ' + PT.MaPhuTung + N' đã được điều chỉnh tồn ('
+					        + CAST(PT.SoLuongTon AS NVARCHAR(20)) + N' ≠ ' + CAST(CT.SoLuongNhap AS NVARCHAR(20))
+					        + N'), hãy điều chỉnh lại hoặc dùng Sửa phiếu!'
+					    FROM dbo.ChiTietPhieuNhap CT
+					    JOIN dbo.PhuTung PT ON PT.MaPhuTung = CT.MaPhuTung
+					    WHERE CT.MaPhieuNhap = @MaPhieuNhap
+					      AND PT.SoLuongTon <> CT.SoLuongNhap
+					      AND NOT EXISTS
+					      (
+					          SELECT 1
+					          FROM dbo.ChiTietPhieuNhap CT2
+					          WHERE CT2.MaPhuTung = CT.MaPhuTung
+					            AND CT2.MaPhieuNhap <> @MaPhieuNhap
+					      );
+
+					    IF @Loi IS NOT NULL
+					        THROW 50002, @Loi, 1;
+
+					    -- 3. Số lượng tồn phải đủ để trừ
+					    SELECT TOP 1 @Loi = N'Số lượng tồn của phụ tùng ' + PT.MaPhuTung + N' không đủ để trừ!'
+					    FROM dbo.ChiTietPhieuNhap CT
+					    JOIN dbo.PhuTung PT ON PT.MaPhuTung = CT.MaPhuTung
+					    WHERE CT.MaPhieuNhap = @MaPhieuNhap
+					      AND PT.SoLuongTon < CT.SoLuongNhap;
+
+					    IF @Loi IS NOT NULL
+					        THROW 50003, @Loi, 1;
+
+					    -- 4. Trừ số lượng tồn
+					    UPDATE PT
+					    SET PT.SoLuongTon = PT.SoLuongTon - CT.SoLuongNhap
+					    FROM dbo.PhuTung PT
+					    JOIN dbo.ChiTietPhieuNhap CT ON CT.MaPhuTung = PT.MaPhuTung
+					    WHERE CT.MaPhieuNhap = @MaPhieuNhap;
+
+					    -- 5. Xóa chi tiết và phiếu nhập (giữ lại danh sách phụ tùng để dọn ở bước 6)
+					    DECLARE @PhuTung TABLE (MaPhuTung VARCHAR(10) NOT NULL PRIMARY KEY);
+
+					    INSERT INTO @PhuTung (MaPhuTung)
+					    SELECT MaPhuTung
+					    FROM dbo.ChiTietPhieuNhap
+					    WHERE MaPhieuNhap = @MaPhieuNhap;
+
+					    DELETE FROM dbo.ChiTietPhieuNhap
+					    WHERE MaPhieuNhap = @MaPhieuNhap;
+
+					    DELETE FROM dbo.PhieuNhap
+					    WHERE MaPhieuNhap = @MaPhieuNhap;
+
+					    -- 6. Phụ tùng không còn thuộc phiếu nhập nào thì xóa
+					    DELETE PT
+					    FROM dbo.PhuTung PT
+					    JOIN @PhuTung X ON X.MaPhuTung = PT.MaPhuTung
+					    WHERE NOT EXISTS (SELECT 1 FROM dbo.ChiTietPhieuNhap CT WHERE CT.MaPhuTung = PT.MaPhuTung);
+
+					    COMMIT TRANSACTION;
+					END TRY
+					BEGIN CATCH
+					    IF @@TRANCOUNT > 0
+					        ROLLBACK TRANSACTION;
+
+					    THROW;
+					END CATCH;
+					""";
+
+					dtbase.ChangeData(sqlXoaPhieuNhap);
+
+					MessageBox.Show("Xóa thành công!", "Thông báo");
+
+					LoadPhieuNhap();
+					LoadPhuTung();
 				}
 				catch (Exception ex)
 				{
@@ -310,6 +557,12 @@ namespace btl
 				"Where ct.MaPhieuNhap = '" + maPhieuNhap + "'";
 
 				dgvChiTietPhieuNhap.DataSource = dtbase.ReadData(sqlChiTietPhieuNhap);
+
+				CapNhatNutPhieuNhap(maPhieuNhap);
+			}
+			else
+			{
+				CapNhatNutPhieuNhap("");
 			}
 		}
 

@@ -406,6 +406,7 @@
 			cbMaPhuTung.Name = "cbMaPhuTung";
 			cbMaPhuTung.Size = new Size(186, 28);
 			cbMaPhuTung.TabIndex = 1;
+			cbMaPhuTung.SelectionChangeCommitted += cbMaPhuTung_SelectionChangeCommitted;
 			//
 			// btnMoiPhuTung
 			//

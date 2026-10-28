@@ -147,7 +147,7 @@ CREATE TABLE PhuTung (   -- khác NCC hoặc khác hạn sử dụng => mã ph�
     TrangThai     BIT            NOT NULL,
     CONSTRAINT PK_PhuTung PRIMARY KEY (MaPhuTung),
     CONSTRAINT FK_PhuTung_NhaCungCap FOREIGN KEY (MaNhaCungCap) REFERENCES NhaCungCap(MaNhaCungCap),
-    CONSTRAINT CK_PhuTung_Gia CHECK (DonGiaNhap > 0 AND DonGiaBan >= DonGiaNhap),
+    CONSTRAINT CK_PhuTung_Gia CHECK (DonGiaNhap > 0 AND DonGiaBan > 0),   -- giá bán được thấp hơn giá nhập khi giá thị trường giảm
     CONSTRAINT CK_PhuTung_SoLuongTon CHECK (SoLuongTon >= 0)
 );
 

@@ -32,6 +32,12 @@
 			txtTimPhuTung = new TextBox();
 			lblTimPhuTung = new Label();
 			grpPhuTung = new GroupBox();
+			lblSoLuongDieuChinh = new Label();
+			nudSoLuongDieuChinh = new NumericUpDown();
+			btnDieuChinhSoLuong = new Button();
+			lblDonGiaBanMoi = new Label();
+			txtDonGiaBanMoi = new TextBox();
+			btnDieuChinhGiaBan = new Button();
 			btnNgungSuDung = new Button();
 			dgvPhuTung = new DataGridView();
 			colMaPhuTung = new DataGridViewTextBoxColumn();
@@ -68,6 +74,7 @@
 			btnThemPhieuNhap = new Button();
 			pnlTimPhuTung.SuspendLayout();
 			grpPhuTung.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)nudSoLuongDieuChinh).BeginInit();
 			((System.ComponentModel.ISupportInitialize)dgvPhuTung).BeginInit();
 			pnlTimPhieuNhap.SuspendLayout();
 			grpPhieuNhap.SuspendLayout();
@@ -105,6 +112,12 @@
 			//
 			// grpPhuTung
 			//
+			grpPhuTung.Controls.Add(lblSoLuongDieuChinh);
+			grpPhuTung.Controls.Add(nudSoLuongDieuChinh);
+			grpPhuTung.Controls.Add(btnDieuChinhSoLuong);
+			grpPhuTung.Controls.Add(lblDonGiaBanMoi);
+			grpPhuTung.Controls.Add(txtDonGiaBanMoi);
+			grpPhuTung.Controls.Add(btnDieuChinhGiaBan);
 			grpPhuTung.Controls.Add(btnNgungSuDung);
 			grpPhuTung.Controls.Add(dgvPhuTung);
 			grpPhuTung.Location = new Point(12, 76);
@@ -113,6 +126,60 @@
 			grpPhuTung.TabIndex = 1;
 			grpPhuTung.TabStop = false;
 			grpPhuTung.Text = "Danh sách phụ tùng";
+			//
+			// lblSoLuongDieuChinh
+			//
+			lblSoLuongDieuChinh.AutoSize = true;
+			lblSoLuongDieuChinh.Location = new Point(16, 630);
+			lblSoLuongDieuChinh.Name = "lblSoLuongDieuChinh";
+			lblSoLuongDieuChinh.Size = new Size(145, 20);
+			lblSoLuongDieuChinh.TabIndex = 17;
+			lblSoLuongDieuChinh.Text = "Số lượng điều chỉnh:";
+			//
+			// nudSoLuongDieuChinh
+			//
+			nudSoLuongDieuChinh.Location = new Point(167, 628);
+			nudSoLuongDieuChinh.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
+			nudSoLuongDieuChinh.Minimum = new decimal(new int[] { 100000, 0, 0, int.MinValue });
+			nudSoLuongDieuChinh.Name = "nudSoLuongDieuChinh";
+			nudSoLuongDieuChinh.Size = new Size(100, 27);
+			nudSoLuongDieuChinh.TabIndex = 18;
+			//
+			// btnDieuChinhSoLuong
+			//
+			btnDieuChinhSoLuong.Location = new Point(280, 615);
+			btnDieuChinhSoLuong.Name = "btnDieuChinhSoLuong";
+			btnDieuChinhSoLuong.Size = new Size(127, 49);
+			btnDieuChinhSoLuong.TabIndex = 19;
+			btnDieuChinhSoLuong.Text = "Điều chỉnh tồn";
+			btnDieuChinhSoLuong.UseVisualStyleBackColor = true;
+			btnDieuChinhSoLuong.Click += btnDieuChinhSoLuong_Click;
+			//
+			// lblDonGiaBanMoi
+			//
+			lblDonGiaBanMoi.AutoSize = true;
+			lblDonGiaBanMoi.Location = new Point(16, 685);
+			lblDonGiaBanMoi.Name = "lblDonGiaBanMoi";
+			lblDonGiaBanMoi.Size = new Size(95, 20);
+			lblDonGiaBanMoi.TabIndex = 20;
+			lblDonGiaBanMoi.Text = "Giá bán mới:";
+			//
+			// txtDonGiaBanMoi
+			//
+			txtDonGiaBanMoi.Location = new Point(167, 683);
+			txtDonGiaBanMoi.Name = "txtDonGiaBanMoi";
+			txtDonGiaBanMoi.Size = new Size(100, 27);
+			txtDonGiaBanMoi.TabIndex = 21;
+			//
+			// btnDieuChinhGiaBan
+			//
+			btnDieuChinhGiaBan.Location = new Point(280, 670);
+			btnDieuChinhGiaBan.Name = "btnDieuChinhGiaBan";
+			btnDieuChinhGiaBan.Size = new Size(127, 49);
+			btnDieuChinhGiaBan.TabIndex = 22;
+			btnDieuChinhGiaBan.Text = "Điều chỉnh giá bán";
+			btnDieuChinhGiaBan.UseVisualStyleBackColor = true;
+			btnDieuChinhGiaBan.Click += btnDieuChinhGiaBan_Click;
 			//
 			// btnNgungSuDung
 			//
@@ -134,8 +201,9 @@
 			dgvPhuTung.Location = new Point(6, 26);
 			dgvPhuTung.Name = "dgvPhuTung";
 			dgvPhuTung.RowHeadersWidth = 51;
-			dgvPhuTung.Size = new Size(848, 638);
+			dgvPhuTung.Size = new Size(848, 583);
 			dgvPhuTung.TabIndex = 0;
+			dgvPhuTung.CellClick += dgvPhuTung_CellClick;
 			//
 			// colMaPhuTung
 			//
@@ -441,6 +509,8 @@
 			pnlTimPhuTung.ResumeLayout(false);
 			pnlTimPhuTung.PerformLayout();
 			grpPhuTung.ResumeLayout(false);
+			grpPhuTung.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)nudSoLuongDieuChinh).EndInit();
 			((System.ComponentModel.ISupportInitialize)dgvPhuTung).EndInit();
 			pnlTimPhieuNhap.ResumeLayout(false);
 			pnlTimPhieuNhap.PerformLayout();
@@ -458,6 +528,12 @@
 		private TextBox txtTimPhuTung;
 		private Label lblTimPhuTung;
 		private GroupBox grpPhuTung;
+		private Label lblSoLuongDieuChinh;
+		private NumericUpDown nudSoLuongDieuChinh;
+		private Button btnDieuChinhSoLuong;
+		private Label lblDonGiaBanMoi;
+		private TextBox txtDonGiaBanMoi;
+		private Button btnDieuChinhGiaBan;
 		private Button btnNgungSuDung;
 		private DataGridView dgvPhuTung;
 		private DataGridViewTextBoxColumn colMaPhuTung;
