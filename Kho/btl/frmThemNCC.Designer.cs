@@ -29,6 +29,7 @@
 		private void InitializeComponent()
 		{
 			label1 = new Label();
+			lblMoTa = new Label();
 			label2 = new Label();
 			txtMaNCC = new TextBox();
 			txtSDT = new TextBox();
@@ -43,12 +44,23 @@
 			// 
 			// label1
 			// 
-			label1.AutoSize = true;
-			label1.Location = new Point(264, 30);
+			label1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+			label1.Location = new Point(0, 8);
 			label1.Name = "label1";
-			label1.Size = new Size(160, 20);
+			label1.Size = new Size(711, 42);
 			label1.TabIndex = 0;
 			label1.Text = "THÊM NHÀ CUNG CẤP";
+			label1.TextAlign = ContentAlignment.MiddleCenter;
+			//
+			// lblMoTa
+			//
+			lblMoTa.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+			lblMoTa.Location = new Point(0, 50);
+			lblMoTa.Name = "lblMoTa";
+			lblMoTa.Size = new Size(711, 26);
+			lblMoTa.TabIndex = 11;
+			lblMoTa.Text = "Nhập thông tin nhà cung cấp mới";
+			lblMoTa.TextAlign = ContentAlignment.MiddleCenter;
 			// 
 			// label2
 			// 
@@ -150,11 +162,12 @@
 			Controls.Add(label3);
 			Controls.Add(txtMaNCC);
 			Controls.Add(label2);
+			Controls.Add(lblMoTa);
 			Controls.Add(label1);
 			FormBorderStyle = FormBorderStyle.FixedSingle;
 			MaximizeBox = false;
 			Name = "frmThemNCC";
-			Text = "frmThemNCC";
+			Text = "Thêm nhà cung cấp";
 			Load += frmThemNCC_Load;
 			ResumeLayout(false);
 			PerformLayout();
@@ -163,6 +176,7 @@
 		#endregion
 
 		private Label label1;
+		private Label lblMoTa;
 		private Label label2;
 		private TextBox txtMaNCC;
 		private TextBox txtSDT;

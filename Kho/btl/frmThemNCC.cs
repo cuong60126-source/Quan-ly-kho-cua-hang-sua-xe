@@ -15,6 +15,9 @@ namespace btl
 		public frmThemNCC()
 		{
 			InitializeComponent();
+
+			Classes.GiaoDien.ApDung(this, btnXacNhan);
+			Classes.GiaoDien.TieuDe(label1, lblMoTa);
 		}
 
 		private void frmThemNCC_Load(object sender, EventArgs e)
@@ -30,9 +33,7 @@ namespace btl
 				return;
 			}
 
-			DataTable data = dtbase.ReadData("Select * From NhaCungCap Where MaNhaCungCap = '" + txtMaNCC.Text + "'");
-
-			if (data.Rows.Count > 0)
+			if (dtbase.KiemTraTonTai("NhaCungCap", "MaNhaCungCap", txtMaNCC.Text))
 			{
 				MessageBox.Show("Mã nhà cung cấp bị trùng!", "Thông báo");
 				return;

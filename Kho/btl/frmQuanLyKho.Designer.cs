@@ -28,6 +28,8 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			lblTieuDe = new Label();
+			lblMoTa = new Label();
 			tabChinh = new TabControl();
 			tabPhuTung = new TabPage();
 			tabPhieuNhap = new TabPage();
@@ -197,7 +199,7 @@
 			//
 			btnDieuChinhSoLuong.Location = new Point(280, 582);
 			btnDieuChinhSoLuong.Name = "btnDieuChinhSoLuong";
-			btnDieuChinhSoLuong.Size = new Size(127, 49);
+			btnDieuChinhSoLuong.Size = new Size(160, 49);
 			btnDieuChinhSoLuong.TabIndex = 19;
 			btnDieuChinhSoLuong.Text = "Điều chỉnh tồn";
 			btnDieuChinhSoLuong.UseVisualStyleBackColor = true;
@@ -223,7 +225,7 @@
 			//
 			btnDieuChinhGiaBan.Location = new Point(280, 637);
 			btnDieuChinhGiaBan.Name = "btnDieuChinhGiaBan";
-			btnDieuChinhGiaBan.Size = new Size(127, 49);
+			btnDieuChinhGiaBan.Size = new Size(160, 49);
 			btnDieuChinhGiaBan.TabIndex = 22;
 			btnDieuChinhGiaBan.Text = "Điều chỉnh giá bán";
 			btnDieuChinhGiaBan.UseVisualStyleBackColor = true;
@@ -263,10 +265,10 @@
 			//
 			// btnNgungSuDung
 			//
-			btnNgungSuDung.Location = new Point(705, 637);
+			btnNgungSuDung.Location = new Point(682, 637);
 			btnNgungSuDung.Name = "btnNgungSuDung";
 			btnNgungSuDung.RightToLeft = RightToLeft.No;
-			btnNgungSuDung.Size = new Size(127, 49);
+			btnNgungSuDung.Size = new Size(150, 49);
 			btnNgungSuDung.TabIndex = 16;
 			btnNgungSuDung.Text = "Ngưng sử dụng";
 			btnNgungSuDung.UseVisualStyleBackColor = true;
@@ -523,9 +525,9 @@
 			//
 			// btnInPhieuNhap
 			//
-			btnInPhieuNhap.Location = new Point(525, 10);
+			btnInPhieuNhap.Location = new Point(557, 10);
 			btnInPhieuNhap.Name = "btnInPhieuNhap";
-			btnInPhieuNhap.Size = new Size(139, 53);
+			btnInPhieuNhap.Size = new Size(160, 53);
 			btnInPhieuNhap.TabIndex = 11;
 			btnInPhieuNhap.Text = "In phiếu nhập";
 			btnInPhieuNhap.UseVisualStyleBackColor = true;
@@ -543,9 +545,9 @@
 			//
 			// btnXoaPhieuNhap
 			//
-			btnXoaPhieuNhap.Location = new Point(354, 10);
+			btnXoaPhieuNhap.Location = new Point(381, 10);
 			btnXoaPhieuNhap.Name = "btnXoaPhieuNhap";
-			btnXoaPhieuNhap.Size = new Size(139, 53);
+			btnXoaPhieuNhap.Size = new Size(160, 53);
 			btnXoaPhieuNhap.TabIndex = 7;
 			btnXoaPhieuNhap.Text = "Xóa phiếu nhập";
 			btnXoaPhieuNhap.UseVisualStyleBackColor = true;
@@ -553,9 +555,9 @@
 			//
 			// btnSuaPhieuNhap
 			//
-			btnSuaPhieuNhap.Location = new Point(191, 10);
+			btnSuaPhieuNhap.Location = new Point(205, 10);
 			btnSuaPhieuNhap.Name = "btnSuaPhieuNhap";
-			btnSuaPhieuNhap.Size = new Size(139, 53);
+			btnSuaPhieuNhap.Size = new Size(160, 53);
 			btnSuaPhieuNhap.TabIndex = 6;
 			btnSuaPhieuNhap.Text = "Sửa phiếu nhập";
 			btnSuaPhieuNhap.UseVisualStyleBackColor = true;
@@ -565,7 +567,7 @@
 			//
 			btnThemPhieuNhap.Location = new Point(29, 10);
 			btnThemPhieuNhap.Name = "btnThemPhieuNhap";
-			btnThemPhieuNhap.Size = new Size(139, 53);
+			btnThemPhieuNhap.Size = new Size(160, 53);
 			btnThemPhieuNhap.TabIndex = 5;
 			btnThemPhieuNhap.Text = "Thêm phiếu nhập";
 			btnThemPhieuNhap.UseVisualStyleBackColor = true;
@@ -573,9 +575,9 @@
 			//
 			// btnXuatExcelPhieuNhap
 			//
-			btnXuatExcelPhieuNhap.Location = new Point(690, 10);
+			btnXuatExcelPhieuNhap.Location = new Point(733, 10);
 			btnXuatExcelPhieuNhap.Name = "btnXuatExcelPhieuNhap";
-			btnXuatExcelPhieuNhap.Size = new Size(139, 53);
+			btnXuatExcelPhieuNhap.Size = new Size(160, 53);
 			btnXuatExcelPhieuNhap.TabIndex = 12;
 			btnXuatExcelPhieuNhap.Text = "Xuất Excel";
 			btnXuatExcelPhieuNhap.UseVisualStyleBackColor = true;
@@ -605,11 +607,31 @@
 			//
 			tabChinh.Controls.Add(tabPhuTung);
 			tabChinh.Controls.Add(tabPhieuNhap);
-			tabChinh.Location = new Point(12, 12);
+			tabChinh.Location = new Point(12, 84);
 			tabChinh.Name = "tabChinh";
 			tabChinh.SelectedIndex = 0;
-			tabChinh.Size = new Size(1730, 792);
+			tabChinh.Size = new Size(1730, 800);
 			tabChinh.TabIndex = 0;
+			//
+			// lblTieuDe
+			//
+			lblTieuDe.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+			lblTieuDe.Location = new Point(0, 8);
+			lblTieuDe.Name = "lblTieuDe";
+			lblTieuDe.Size = new Size(1754, 42);
+			lblTieuDe.TabIndex = 1;
+			lblTieuDe.Text = "KHO PHỤ TÙNG";
+			lblTieuDe.TextAlign = ContentAlignment.MiddleCenter;
+			//
+			// lblMoTa
+			//
+			lblMoTa.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+			lblMoTa.Location = new Point(0, 50);
+			lblMoTa.Name = "lblMoTa";
+			lblMoTa.Size = new Size(1754, 26);
+			lblMoTa.TabIndex = 2;
+			lblMoTa.Text = "Quản lý phụ tùng, lịch sử điều chỉnh tồn kho, giá bán và phiếu nhập";
+			lblMoTa.TextAlign = ContentAlignment.MiddleCenter;
 			//
 			// tabPhuTung
 			//
@@ -870,12 +892,14 @@
 			//
 			AutoScaleDimensions = new SizeF(8F, 20F);
 			AutoScaleMode = AutoScaleMode.Font;
-			ClientSize = new Size(1754, 816);
+			ClientSize = new Size(1754, 896);
+			Controls.Add(lblMoTa);
+			Controls.Add(lblTieuDe);
 			Controls.Add(tabChinh);
 			FormBorderStyle = FormBorderStyle.FixedSingle;
 			MaximizeBox = false;
 			Name = "frmQuanLyKho";
-			Text = "frmQuanLyKho";
+			Text = "Quản lý kho phụ tùng";
 			Load += frmQuanLyKho_Load;
 			tabChinh.ResumeLayout(false);
 			tabPhuTung.ResumeLayout(false);
@@ -905,6 +929,8 @@
 
 		#endregion
 
+		private Label lblTieuDe;
+		private Label lblMoTa;
 		private TabControl tabChinh;
 		private TabPage tabPhuTung;
 		private TabPage tabPhieuNhap;

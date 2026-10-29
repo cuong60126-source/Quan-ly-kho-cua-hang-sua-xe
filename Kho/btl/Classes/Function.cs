@@ -24,5 +24,10 @@ namespace btl.Classes
 				e.Handled = true;
 			}
 		}
+		// Escape dấu ' để tên/ghi chú/lý do có dấu nháy không làm hỏng câu SQL
+		public string EscapeSql(object? value)
+		{
+			return (value?.ToString() ?? "").Replace("'", "''");
+		}
 	}
 }

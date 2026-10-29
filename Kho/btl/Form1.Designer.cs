@@ -28,6 +28,9 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			pnlTieuDe = new Panel();
+			lblTieuDe = new Label();
+			lblMoTa = new Label();
 			groupBox1 = new GroupBox();
 			btnXoaNCC = new Button();
 			btnThemNCC = new Button();
@@ -84,6 +87,7 @@
 			groupBox2.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)dgvPhuTung).BeginInit();
 			panel2.SuspendLayout();
+			pnlTieuDe.SuspendLayout();
 			SuspendLayout();
 			// 
 			// groupBox1
@@ -99,7 +103,7 @@
 			groupBox1.Controls.Add(txtMaPhieuNhap);
 			groupBox1.Controls.Add(label1);
 			groupBox1.Dock = DockStyle.Top;
-			groupBox1.Location = new Point(0, 0);
+			groupBox1.Location = new Point(0, 84);
 			groupBox1.Name = "groupBox1";
 			groupBox1.Size = new Size(1295, 154);
 			groupBox1.TabIndex = 0;
@@ -197,7 +201,7 @@
 			panel1.Controls.Add(groupBox2);
 			panel1.Controls.Add(dgvPhuTung);
 			panel1.Dock = DockStyle.Fill;
-			panel1.Location = new Point(0, 154);
+			panel1.Location = new Point(0, 238);
 			panel1.Name = "panel1";
 			panel1.Size = new Size(1295, 647);
 			panel1.TabIndex = 2;
@@ -355,7 +359,7 @@
 			txtDonGiaNhap.Name = "txtDonGiaNhap";
 			txtDonGiaNhap.Size = new Size(172, 27);
 			txtDonGiaNhap.TabIndex = 13;
-			txtDonGiaNhap.TextChanged += txtDonGiaNhap_TextChanged;
+			txtDonGiaNhap.TextChanged += TinhThanhTien_TextChanged;
 			// 
 			// label8
 			// 
@@ -372,7 +376,7 @@
 			txtSoLuongNhap.Name = "txtSoLuongNhap";
 			txtSoLuongNhap.Size = new Size(69, 27);
 			txtSoLuongNhap.TabIndex = 11;
-			txtSoLuongNhap.TextChanged += txtSoLuongNhap_TextChanged;
+			txtSoLuongNhap.TextChanged += TinhThanhTien_TextChanged;
 			// 
 			// label7
 			// 
@@ -443,10 +447,40 @@
 			panel2.Controls.Add(btnThoat);
 			panel2.Controls.Add(btnLuuPhieu);
 			panel2.Dock = DockStyle.Bottom;
-			panel2.Location = new Point(0, 701);
+			panel2.Location = new Point(0, 785);
 			panel2.Name = "panel2";
 			panel2.Size = new Size(1295, 100);
 			panel2.TabIndex = 3;
+			//
+			// pnlTieuDe
+			//
+			pnlTieuDe.Controls.Add(lblMoTa);
+			pnlTieuDe.Controls.Add(lblTieuDe);
+			pnlTieuDe.Dock = DockStyle.Top;
+			pnlTieuDe.Location = new Point(0, 0);
+			pnlTieuDe.Name = "pnlTieuDe";
+			pnlTieuDe.Size = new Size(1295, 84);
+			pnlTieuDe.TabIndex = 6;
+			//
+			// lblTieuDe
+			//
+			lblTieuDe.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+			lblTieuDe.Location = new Point(0, 8);
+			lblTieuDe.Name = "lblTieuDe";
+			lblTieuDe.Size = new Size(1295, 42);
+			lblTieuDe.TabIndex = 4;
+			lblTieuDe.Text = "PHIẾU NHẬP KHO";
+			lblTieuDe.TextAlign = ContentAlignment.MiddleCenter;
+			//
+			// lblMoTa
+			//
+			lblMoTa.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+			lblMoTa.Location = new Point(0, 50);
+			lblMoTa.Name = "lblMoTa";
+			lblMoTa.Size = new Size(1295, 26);
+			lblMoTa.TabIndex = 5;
+			lblMoTa.Text = "Lập mới hoặc chỉnh sửa phiếu nhập phụ tùng";
+			lblMoTa.TextAlign = ContentAlignment.MiddleCenter;
 			// 
 			// btnThoat
 			// 
@@ -568,14 +602,15 @@
 			// 
 			AutoScaleDimensions = new SizeF(8F, 20F);
 			AutoScaleMode = AutoScaleMode.Font;
-			ClientSize = new Size(1295, 801);
-			Controls.Add(panel2);
+			ClientSize = new Size(1295, 885);
 			Controls.Add(panel1);
+			Controls.Add(panel2);
 			Controls.Add(groupBox1);
+			Controls.Add(pnlTieuDe);
 			FormBorderStyle = FormBorderStyle.FixedSingle;
 			MaximizeBox = false;
 			Name = "frmNhapPhieuNhap";
-			Text = "Form nhập phiếu";
+			Text = "Phiếu nhập kho";
 			Load += frmKho_Load;
 			groupBox1.ResumeLayout(false);
 			groupBox1.PerformLayout();
@@ -584,11 +619,15 @@
 			groupBox2.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)dgvPhuTung).EndInit();
 			panel2.ResumeLayout(false);
+			pnlTieuDe.ResumeLayout(false);
 			ResumeLayout(false);
 		}
 
 		#endregion
 
+		private Panel pnlTieuDe;
+		private Label lblTieuDe;
+		private Label lblMoTa;
 		private GroupBox groupBox1;
 		private TextBox txtMaNVNhap;
 		private Label label4;

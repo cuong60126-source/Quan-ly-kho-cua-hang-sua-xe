@@ -6,8 +6,6 @@ using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
 using System.Drawing.Printing;
-using System.Windows.Markup;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using ClosedXML.Excel;
 
 namespace btl
@@ -18,9 +16,16 @@ namespace btl
 		Classes.Function function = new Classes.Function();
 		private PrintDocument printDocument = new PrintDocument();
 		private DataTable dataIn;
+
+		#region Khởi tạo
+
 		public frmQuanLyKho()
 		{
 			InitializeComponent();
+
+			Classes.GiaoDien.ApDung(this, btnThemPhieuNhap);
+			Classes.GiaoDien.TieuDe(lblTieuDe, lblMoTa);
+			Classes.GiaoDien.NhanManh(lblTongTienLech);
 		}
 
 		private void frmQuanLyKho_Load(object sender, EventArgs e)
@@ -32,19 +37,25 @@ namespace btl
 			LoadDieuChinh();
 		}
 
-		// Escape dấu ' để mã NV/lý do có dấu nháy không làm hỏng câu SQL
-		private string EscapeSql(string value)
+		private void btnThoat_Click(object sender, EventArgs e)
 		{
-			return value.Replace("'", "''");
+			if (MessageBox.Show("Chắc chắn muốn thoát?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+			{
+				this.Close();
+			}
 		}
 
-		// ===== Phụ tùng =====
+		#endregion
 
-		private void LoadPhuTung()
+		#region Phụ tùng
+
+		private void LoadPhuTung(string timPhuTung = "")
 		{
+			timPhuTung = function.EscapeSql(timPhuTung);
+
 			string sqlDgvPhuTung = "Select pt.MaPhuTung, pt.TenPhuTung, ncc.TenNhaCungCap As TenNCC, pt.SoLuongTon, pt.DonGiaBan, pt.DonGiaNhap, pt.HanSuDung " +
 				"From PhuTung pt Join NhaCungCap ncc On pt.MaNhaCungCap = ncc.MaNhaCungCap " +
-				"Where pt.TrangThai = 1 " +
+				"Where pt.TrangThai = 1 And (pt.MaPhuTung Like '%" + timPhuTung + "%' Or pt.TenPhuTung Like N'%" + timPhuTung + "%') " +
 				"Order By pt.MaPhuTung Asc";
 
 			dgvPhuTung.AutoGenerateColumns = false;
@@ -52,11 +63,37 @@ namespace btl
 			dgvPhuTung.ReadOnly = true;
 		}
 
-		private void btnNgungSuDung_Click(object sender, EventArgs e)
+		private void txtTimPhuTung_TextChanged(object sender, EventArgs e)
+		{
+			LoadPhuTung(txtTimPhuTung.Text);
+		}
+
+		// Chọn phụ tùng thì điền sẵn giá bán hiện tại để sửa
+		private void dgvPhuTung_CellClick(object sender, DataGridViewCellEventArgs e)
+		{
+			if (e.RowIndex < 0)
+			{
+				return;
+			}
+
+			txtDonGiaBanMoi.Text = Convert.ToDecimal(dgvPhuTung.Rows[e.RowIndex].Cells["colDonGiaBan"].Value).ToString("0.##");
+		}
+
+		private bool KiemTraChonPhuTung()
 		{
 			if (dgvPhuTung.CurrentRow == null)
 			{
 				MessageBox.Show("Chưa chọn phụ tùng!", "Thông báo");
+				return false;
+			}
+
+			return true;
+		}
+
+		private void btnNgungSuDung_Click(object sender, EventArgs e)
+		{
+			if (!KiemTraChonPhuTung())
+			{
 				return;
 			}
 
@@ -72,11 +109,53 @@ namespace btl
 			}
 		}
 
+		#endregion
+
+		#region Điều chỉnh tồn và giá bán
+
+		// Mã NV và lý do bắt buộc cho mọi lần điều chỉnh tồn/giá bán
+		private bool KiemTraThongTinDieuChinh()
+		{
+			if (txtMaNVDieuChinh.Text.Trim() == "" || txtLyDoDieuChinh.Text.Trim() == "")
+			{
+				MessageBox.Show("Nhập mã NV và lý do điều chỉnh!", "Thông báo");
+				return false;
+			}
+
+			if (!dtbase.KiemTraTonTai("NhanVien", "MaNhanVien", txtMaNVDieuChinh.Text.Trim()))
+			{
+				MessageBox.Show("Mã nhân viên không tồn tại!", "Thông báo");
+				txtMaNVDieuChinh.Focus();
+				return false;
+			}
+
+			return true;
+		}
+
+		// Ghi lịch sử và cập nhật phụ tùng trong 1 transaction, xong thì load lại phụ tùng và lịch sử
+		private bool LuuDieuChinh(string sqlDieuChinh, string thongBaoLoi)
+		{
+			try
+			{
+				dtbase.ChangeDataTransaction(sqlDieuChinh);
+
+				txtLyDoDieuChinh.Clear();
+
+				LoadPhuTung();
+				LoadDieuChinh();
+				return true;
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(thongBaoLoi + ex.Message, "Thông báo");
+				return false;
+			}
+		}
+
 		private void btnDieuChinhSoLuong_Click(object sender, EventArgs e)
 		{
-			if (dgvPhuTung.CurrentRow == null)
+			if (!KiemTraChonPhuTung())
 			{
-				MessageBox.Show("Chưa chọn phụ tùng!", "Thông báo");
 				return;
 			}
 
@@ -106,71 +185,35 @@ namespace btl
 			decimal donGiaNhap = Convert.ToDecimal(dgvPhuTung.CurrentRow.Cells["colDonGiaNhap"].Value);
 			decimal tienLech = soLuongDieuChinh * donGiaNhap;
 
-			if (MessageBox.Show("Điều chỉnh tồn " + maPhuTung + ": " + soLuongTon + " → " + soLuongTonMoi + " (tiền lệch " + tienLech.ToString("N0") + ")?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+			if (MessageBox.Show("Điều chỉnh tồn " + maPhuTung + ": " + soLuongTon + " -> " + soLuongTonMoi + " (tiền lệch " + tienLech.ToString("N0") + ")?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
 			{
-				try
-				{
-					string maDieuChinh = GenerateMaDieuChinh("DieuChinhTonKho", "MaDieuChinh", "DC");
-					string maNV = EscapeSql(txtMaNVDieuChinh.Text.Trim());
-					string lyDo = EscapeSql(txtLyDoDieuChinh.Text.Trim());
+				string maDieuChinh = dtbase.GenerateMa("DieuChinhTonKho", "MaDieuChinh", "DC");
+				string maNV = function.EscapeSql(txtMaNVDieuChinh.Text.Trim());
+				string lyDo = function.EscapeSql(txtLyDoDieuChinh.Text.Trim());
 
-					// Ghi lịch sử và cập nhật tồn trong 1 transaction, số lượng cũ lấy từ database
-					string sqlDieuChinhSoLuong = $"""
-					SET XACT_ABORT ON;
+				// Số lượng cũ lấy từ database
+				string sqlDieuChinhSoLuong = $"""
+					INSERT INTO dbo.DieuChinhTonKho (MaDieuChinh, MaPhuTung, MaNhanVien, NgayDieuChinh, SoLuongCu, SoLuongMoi, DonGiaNhap, LyDo)
+					SELECT '{maDieuChinh}', MaPhuTung, '{maNV}', CAST(GETDATE() AS DATE), SoLuongTon, SoLuongTon + ({soLuongDieuChinh}), DonGiaNhap, N'{lyDo}'
+					FROM dbo.PhuTung
+					WHERE MaPhuTung = '{maPhuTung}';
 
-					BEGIN TRY
-					    BEGIN TRANSACTION;
-
-					    INSERT INTO dbo.DieuChinhTonKho (MaDieuChinh, MaPhuTung, MaNhanVien, NgayDieuChinh, SoLuongCu, SoLuongMoi, DonGiaNhap, LyDo)
-					    SELECT '{maDieuChinh}', MaPhuTung, '{maNV}', CAST(GETDATE() AS DATE), SoLuongTon, SoLuongTon + ({soLuongDieuChinh}), DonGiaNhap, N'{lyDo}'
-					    FROM dbo.PhuTung
-					    WHERE MaPhuTung = '{maPhuTung}';
-
-					    UPDATE dbo.PhuTung
-					    SET SoLuongTon = SoLuongTon + ({soLuongDieuChinh})
-					    WHERE MaPhuTung = '{maPhuTung}';
-
-					    COMMIT TRANSACTION;
-					END TRY
-					BEGIN CATCH
-					    IF @@TRANCOUNT > 0
-					        ROLLBACK TRANSACTION;
-
-					    THROW;
-					END CATCH;
+					UPDATE dbo.PhuTung
+					SET SoLuongTon = SoLuongTon + ({soLuongDieuChinh})
+					WHERE MaPhuTung = '{maPhuTung}';
 					""";
 
-					dtbase.ChangeData(sqlDieuChinhSoLuong);
-
-					nudSoLuongDieuChinh.Value = 0;
-					txtLyDoDieuChinh.Clear();
-
-					LoadPhuTung();
-					LoadDieuChinh();
-				}
-				catch (Exception ex)
+				if (LuuDieuChinh(sqlDieuChinhSoLuong, "Lỗi khi điều chỉnh tồn: "))
 				{
-					MessageBox.Show("Lỗi khi điều chỉnh tồn: " + ex.Message, "Thông báo");
+					nudSoLuongDieuChinh.Value = 0;
 				}
 			}
-		}
-
-		// Chọn phụ tùng thì điền sẵn giá bán hiện tại để sửa
-		private void dgvPhuTung_CellClick(object sender, DataGridViewCellEventArgs e)
-		{
-			if (e.RowIndex < 0)
-			{
-				return;
-			}
-
-			txtDonGiaBanMoi.Text = Convert.ToDecimal(dgvPhuTung.Rows[e.RowIndex].Cells["colDonGiaBan"].Value).ToString("0.##");
 		}
 
 		private void btnDieuChinhGiaBan_Click(object sender, EventArgs e)
 		{
-			if (dgvPhuTung.CurrentRow == null)
+			if (!KiemTraChonPhuTung())
 			{
-				MessageBox.Show("Chưa chọn phụ tùng!", "Thông báo");
 				return;
 			}
 
@@ -202,7 +245,7 @@ namespace btl
 				return;
 			}
 
-			string xacNhan = "Điều chỉnh giá bán " + maPhuTung + ": " + donGiaBan.ToString("N0") + " → " + donGiaBanMoi.ToString("N0") + "?";
+			string xacNhan = "Điều chỉnh giá bán " + maPhuTung + ": " + donGiaBan.ToString("N0") + " -> " + donGiaBanMoi.ToString("N0") + "?";
 
 			// Giá thị trường giảm thì được bán thấp hơn giá nhập, chỉ cảnh báo để tránh gõ nhầm
 			if (donGiaBanMoi < donGiaNhap)
@@ -212,108 +255,36 @@ namespace btl
 
 			if (MessageBox.Show(xacNhan, "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
 			{
-				try
-				{
-					string maDieuChinhGia = GenerateMaDieuChinh("DieuChinhGiaBan", "MaDieuChinhGia", "DG");
-					string maNV = EscapeSql(txtMaNVDieuChinh.Text.Trim());
-					string lyDo = EscapeSql(txtLyDoDieuChinh.Text.Trim());
+				string maDieuChinhGia = dtbase.GenerateMa("DieuChinhGiaBan", "MaDieuChinhGia", "DG");
+				string maNV = function.EscapeSql(txtMaNVDieuChinh.Text.Trim());
+				string lyDo = function.EscapeSql(txtLyDoDieuChinh.Text.Trim());
 
-					// Ghi lịch sử và cập nhật giá bán trong 1 transaction, giá cũ lấy từ database
-					string sqlDieuChinhGiaBan = $"""
-					SET XACT_ABORT ON;
+				// Giá cũ lấy từ database
+				string sqlDieuChinhGiaBan = $"""
+					INSERT INTO dbo.DieuChinhGiaBan (MaDieuChinhGia, MaPhuTung, MaNhanVien, NgayDieuChinh, GiaBanCu, GiaBanMoi, LyDo)
+					SELECT '{maDieuChinhGia}', MaPhuTung, '{maNV}', CAST(GETDATE() AS DATE), DonGiaBan, {donGiaBanMoi.ToString("0")}, N'{lyDo}'
+					FROM dbo.PhuTung
+					WHERE MaPhuTung = '{maPhuTung}';
 
-					BEGIN TRY
-					    BEGIN TRANSACTION;
-
-					    INSERT INTO dbo.DieuChinhGiaBan (MaDieuChinhGia, MaPhuTung, MaNhanVien, NgayDieuChinh, GiaBanCu, GiaBanMoi, LyDo)
-					    SELECT '{maDieuChinhGia}', MaPhuTung, '{maNV}', CAST(GETDATE() AS DATE), DonGiaBan, {donGiaBanMoi.ToString("0")}, N'{lyDo}'
-					    FROM dbo.PhuTung
-					    WHERE MaPhuTung = '{maPhuTung}';
-
-					    UPDATE dbo.PhuTung
-					    SET DonGiaBan = {donGiaBanMoi.ToString("0")}
-					    WHERE MaPhuTung = '{maPhuTung}';
-
-					    COMMIT TRANSACTION;
-					END TRY
-					BEGIN CATCH
-					    IF @@TRANCOUNT > 0
-					        ROLLBACK TRANSACTION;
-
-					    THROW;
-					END CATCH;
+					UPDATE dbo.PhuTung
+					SET DonGiaBan = {donGiaBanMoi.ToString("0")}
+					WHERE MaPhuTung = '{maPhuTung}';
 					""";
 
-					dtbase.ChangeData(sqlDieuChinhGiaBan);
-
-					txtDonGiaBanMoi.Clear();
-					txtLyDoDieuChinh.Clear();
-
-					LoadPhuTung();
-					LoadDieuChinh();
-				}
-				catch (Exception ex)
+				if (LuuDieuChinh(sqlDieuChinhGiaBan, "Lỗi khi điều chỉnh giá bán: "))
 				{
-					MessageBox.Show("Lỗi khi điều chỉnh giá bán: " + ex.Message, "Thông báo");
+					txtDonGiaBanMoi.Clear();
 				}
 			}
 		}
 
-		private void txtTimPhuTung_TextChanged(object sender, EventArgs e)
-		{
-			string timPhuTung = txtTimPhuTung.Text;
+		#endregion
 
-			string sqlTimPhuTung = "Select pt.MaPhuTung, pt.TenPhuTung, ncc.TenNhaCungCap As TenNCC, pt.SoLuongTon, pt.DonGiaBan, pt.DonGiaNhap, pt.HanSuDung " +
-				"From PhuTung pt Join NhaCungCap ncc On pt.MaNhaCungCap = ncc.MaNhaCungCap " +
-				"Where pt.TrangThai = 1 And (pt.MaPhuTung Like '%" + timPhuTung + "%' Or pt.TenPhuTung Like N'%" + timPhuTung + "%')" +
-				"Order By pt.MaPhuTung Asc";
-
-			dgvPhuTung.DataSource = dtbase.ReadData(sqlTimPhuTung);
-		}
-
-		// Mã NV và lý do bắt buộc cho mọi lần điều chỉnh tồn/giá bán
-		private bool KiemTraThongTinDieuChinh()
-		{
-			if (txtMaNVDieuChinh.Text.Trim() == "" || txtLyDoDieuChinh.Text.Trim() == "")
-			{
-				MessageBox.Show("Nhập mã NV và lý do điều chỉnh!", "Thông báo");
-				return false;
-			}
-
-			string sqlNhanVien = "Select * " +
-				"From NhanVien " +
-				"Where MaNhanVien = '" + EscapeSql(txtMaNVDieuChinh.Text.Trim()) + "'";
-
-			if (dtbase.ReadData(sqlNhanVien).Rows.Count == 0)
-			{
-				MessageBox.Show("Mã nhân viên không tồn tại!", "Thông báo");
-				txtMaNVDieuChinh.Focus();
-				return false;
-			}
-
-			return true;
-		}
-
-		private string GenerateMaDieuChinh(string bang, string cot, string tienTo)
-		{
-			string sql = "Select Max(Cast(Substring(" + cot + ", 3, Len(" + cot + ")) As int)) From " + bang;
-
-			DataTable data = dtbase.ReadData(sql);
-
-			int so = 1;
-			if (data.Rows.Count > 0 && data.Rows[0][0] != DBNull.Value)
-			{
-				so = Convert.ToInt32(data.Rows[0][0]) + 1;
-			}
-
-			return tienTo + so.ToString("D3");
-		}
-
-		// ===== Lịch sử điều chỉnh =====
+		#region Lịch sử điều chỉnh
 
 		private void LoadDieuChinh()
 		{
-			string timPhuTung = EscapeSql(txtTimDieuChinh.Text);
+			string timPhuTung = function.EscapeSql(txtTimDieuChinh.Text);
 
 			string sqlDieuChinhTonKho = "Select dc.MaDieuChinh, dc.NgayDieuChinh, dc.MaPhuTung, pt.TenPhuTung, dc.SoLuongCu, dc.SoLuongMoi, dc.DonGiaNhap, dc.GiaTriChenhLech, dc.MaNhanVien, dc.LyDo " +
 				"From DieuChinhTonKho dc Join PhuTung pt On dc.MaPhuTung = pt.MaPhuTung " +
@@ -340,6 +311,11 @@ namespace btl
 			dgvDieuChinhGiaBan.ReadOnly = true;
 		}
 
+		private void txtTimDieuChinh_TextChanged(object sender, EventArgs e)
+		{
+			LoadDieuChinh();
+		}
+
 		// Tiền lệch dương là thừa hàng, âm là thiếu hàng
 		private void TinhTongTienLech(DataTable dataTonKho, out decimal tongThua, out decimal tongThieu)
 		{
@@ -359,17 +335,17 @@ namespace btl
 			}
 		}
 
-		private void txtTimDieuChinh_TextChanged(object sender, EventArgs e)
-		{
-			LoadDieuChinh();
-		}
+		#endregion
 
-		// ===== Phiếu nhập =====
+		#region Phiếu nhập
 
-		private void LoadPhieuNhap()
+		private void LoadPhieuNhap(string timPhieuNhap = "")
 		{
+			timPhieuNhap = function.EscapeSql(timPhieuNhap);
+
 			string sqlPhieuNhap = "Select pn.MaPhieuNhap, pn.NgayNhap, Sum(ct.SoLuongNhap) As TongSoLuongNhap, Sum(ct.ThanhTien) As ThanhTien, pn.GhiChu, pn.MaNhanVienNhap " +
 				"From PhieuNhap pn Join ChiTietPhieuNhap ct On pn.MaPhieuNhap = ct.MaPhieuNhap " +
+				"Where pn.MaPhieuNhap Like '%" + timPhieuNhap + "%' " +
 				"Group By pn.MaPhieuNhap, pn.NgayNhap, pn.GhiChu, pn.MaNhanVienNhap " +
 				"Order By pn.MaPhieuNhap Asc";
 
@@ -380,15 +356,7 @@ namespace btl
 
 			if (dgvPhieuNhap.Rows.Count > 0)
 			{
-				string maPhieuNhap = dgvPhieuNhap.Rows[0].Cells["colMaPhieuNhap"].Value.ToString();
-
-				string sqlDgvChiTietPhieuNhap = "Select ct.MaPhieuNhap, ct.MaPhuTung, ct.SoLuongNhap, pt.DonGiaNhap, ct.ThanhTien, pt.HanSuDung " +
-				"From PhuTung pt Join ChiTietPhieuNhap ct On pt.MaPhuTung = ct.MaPhuTung " +
-				"Where ct.MaPhieuNhap = '" + maPhieuNhap + "'";
-
-				dgvChiTietPhieuNhap.DataSource = dtbase.ReadData(sqlDgvChiTietPhieuNhap);
-
-				CapNhatNutPhieuNhap(maPhieuNhap);
+				LoadChiTietPhieuNhap(dgvPhieuNhap.Rows[0].Cells["colMaPhieuNhap"].Value.ToString());
 			}
 			else
 			{
@@ -396,10 +364,8 @@ namespace btl
 			}
 		}
 
-		private void dgvPhieuNhap_CellClick(object sender, DataGridViewCellEventArgs e)
+		private void LoadChiTietPhieuNhap(string maPhieuNhap)
 		{
-			string maPhieuNhap = dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString();
-
 			string sqlDgvChiTietPhieuNhap = "Select ct.MaPhieuNhap, ct.MaPhuTung, ct.SoLuongNhap, pt.DonGiaNhap, ct.ThanhTien, pt.HanSuDung " +
 				"From PhuTung pt Join ChiTietPhieuNhap ct On pt.MaPhuTung = ct.MaPhuTung " +
 				"Where ct.MaPhieuNhap = '" + maPhieuNhap + "'";
@@ -407,6 +373,16 @@ namespace btl
 			dgvChiTietPhieuNhap.DataSource = dtbase.ReadData(sqlDgvChiTietPhieuNhap);
 
 			CapNhatNutPhieuNhap(maPhieuNhap);
+		}
+
+		private void txtTimPhieuNhap_TextChanged(object sender, EventArgs e)
+		{
+			LoadPhieuNhap(txtTimPhieuNhap.Text);
+		}
+
+		private void dgvPhieuNhap_CellClick(object sender, DataGridViewCellEventArgs e)
+		{
+			LoadChiTietPhieuNhap(dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString());
 		}
 
 		// Phiếu có phụ tùng đã được đưa vào dịch vụ (ChiTietDichVu) thì không được sửa/xóa
@@ -427,46 +403,37 @@ namespace btl
 			btnXoaPhieuNhap.Enabled = choPhep;
 		}
 
-		private string GenerateMaPhieuNhap()
-		{
-			string sql = "Select Max(Cast(Substring(MaPhieuNhap, 3, Len(MaPhieuNhap)) As int)) From PhieuNhap";
-
-			DataTable data = dtbase.ReadData(sql);
-
-			int so = 1;
-			if (data.Rows.Count > 0 && data.Rows[0][0] != DBNull.Value)
-			{
-				so = Convert.ToInt32(data.Rows[0][0]) + 1;
-			}
-
-			return "PN" + so.ToString("D3");
-		}
-
-		private void btnThemPhieuNhap_Click(object sender, EventArgs e)
-		{
-			frmNhapPhieuNhap formNhapPhieuNhap = new frmNhapPhieuNhap(GenerateMaPhieuNhap());
-			formNhapPhieuNhap.ShowDialog();
-
-			LoadPhieuNhap();
-			LoadPhuTung();
-		}
-
-		private void btnSuaPhieuNhap_Click(object sender, EventArgs e)
+		private bool KiemTraChonPhieuNhap(string thongBao)
 		{
 			if (dgvChiTietPhieuNhap.Rows.Count == 0 || dgvPhieuNhap.CurrentRow.IsNewRow == true)
 			{
-				MessageBox.Show("Chọn phiếu cần sửa!", "Thông báo");
-				return;
+				MessageBox.Show(thongBao, "Thông báo");
+				return false;
 			}
 
-			string maPhieuNhap = dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString();
+			return true;
+		}
 
-			if (PhieuNhapDaDungTrongDichVu(maPhieuNhap))
+		// Sửa/xóa được khi đã chọn phiếu và phụ tùng trong phiếu chưa vào dịch vụ; hanhDong là "sửa" hoặc "xóa"
+		private bool KiemTraSuaXoaPhieuNhap(string hanhDong)
+		{
+			if (!KiemTraChonPhieuNhap("Chọn phiếu cần " + hanhDong + "!"))
 			{
-				MessageBox.Show("Phiếu nhập có phụ tùng đã được dùng trong dịch vụ, không thể sửa!", "Thông báo");
-				return;
+				return false;
 			}
 
+			if (PhieuNhapDaDungTrongDichVu(dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString()))
+			{
+				MessageBox.Show("Phiếu nhập có phụ tùng đã được dùng trong dịch vụ, không thể " + hanhDong + "!", "Thông báo");
+				return false;
+			}
+
+			return true;
+		}
+
+		// Thêm và sửa phiếu đều mở form nhập phiếu, đóng form thì load lại phiếu nhập và tồn kho
+		private void MoFormNhapPhieuNhap(string maPhieuNhap)
+		{
 			frmNhapPhieuNhap formNhapPhieuNhap = new frmNhapPhieuNhap(maPhieuNhap);
 			formNhapPhieuNhap.ShowDialog();
 
@@ -474,104 +441,97 @@ namespace btl
 			LoadPhuTung();
 		}
 
-		private void btnXoaPhieuNhap_Click(object sender, EventArgs e)
+		private void btnThemPhieuNhap_Click(object sender, EventArgs e)
 		{
-			if (dgvChiTietPhieuNhap.Rows.Count == 0 || dgvPhieuNhap.CurrentRow.IsNewRow == true)
+			MoFormNhapPhieuNhap(dtbase.GenerateMa("PhieuNhap", "MaPhieuNhap", "PN"));
+		}
+
+		private void btnSuaPhieuNhap_Click(object sender, EventArgs e)
+		{
+			if (!KiemTraSuaXoaPhieuNhap("sửa"))
 			{
-				MessageBox.Show("Chọn phiếu cần xóa!", "Thông báo");
 				return;
 			}
 
-			string maPhieuNhap = dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString();
+			MoFormNhapPhieuNhap(dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString());
+		}
 
-			if (PhieuNhapDaDungTrongDichVu(maPhieuNhap))
+		private void btnXoaPhieuNhap_Click(object sender, EventArgs e)
+		{
+			if (!KiemTraSuaXoaPhieuNhap("xóa"))
 			{
-				MessageBox.Show("Phiếu nhập có phụ tùng đã được dùng trong dịch vụ, không thể xóa!", "Thông báo");
 				return;
 			}
 
 			if (MessageBox.Show("Chắc chắn muốn xóa phiếu nhập?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
 			{
+				string maPhieuNhap = dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString();
+
 				try
 				{
-					// Cả phiếu được xóa trong 1 transaction: lỗi ở bất kỳ bước nào thì không xóa gì cả.
 					string sqlXoaPhieuNhap = $"""
-					SET XACT_ABORT ON;
+						DECLARE @MaPhieuNhap VARCHAR(10) = '{maPhieuNhap}';
+						DECLARE @Loi NVARCHAR(400);
 
-					BEGIN TRY
-					    BEGIN TRANSACTION;
+						-- 1. Phụ tùng đã được đưa vào dịch vụ thì không được xóa phiếu
+						IF EXISTS
+						(
+						    SELECT 1
+						    FROM dbo.ChiTietPhieuNhap CT
+						    JOIN dbo.ChiTietDichVu CTDV ON CTDV.MaPhuTung = CT.MaPhuTung
+						    WHERE CT.MaPhieuNhap = @MaPhieuNhap
+						)
+						    THROW 50001, N'Phiếu nhập có phụ tùng đã được dùng trong dịch vụ, không thể xóa!', 1;
 
-					    DECLARE @MaPhieuNhap VARCHAR(10) = '{maPhieuNhap}';
-					    DECLARE @Loi NVARCHAR(400);
+						-- 2. Phụ tùng đã có lịch sử điều chỉnh tồn/giá bán thì không được xóa phiếu
+						SELECT TOP 1 @Loi = N'Phụ tùng ' + CT.MaPhuTung + N' đã có điều chỉnh tồn hoặc giá bán, không thể xóa phiếu!'
+						FROM dbo.ChiTietPhieuNhap CT
+						WHERE CT.MaPhieuNhap = @MaPhieuNhap
+						  AND (EXISTS (SELECT 1 FROM dbo.DieuChinhTonKho DC WHERE DC.MaPhuTung = CT.MaPhuTung)
+						    OR EXISTS (SELECT 1 FROM dbo.DieuChinhGiaBan DG WHERE DG.MaPhuTung = CT.MaPhuTung));
 
-					    -- 1. Phụ tùng đã được đưa vào dịch vụ thì không được xóa phiếu
-					    IF EXISTS
-					    (
-					        SELECT 1
-					        FROM dbo.ChiTietPhieuNhap CT
-					        JOIN dbo.ChiTietDichVu CTDV ON CTDV.MaPhuTung = CT.MaPhuTung
-					        WHERE CT.MaPhieuNhap = @MaPhieuNhap
-					    )
-					        THROW 50001, N'Phiếu nhập có phụ tùng đã được dùng trong dịch vụ, không thể xóa!', 1;
+						IF @Loi IS NOT NULL
+						    THROW 50002, @Loi, 1;
 
-					    -- 2. Phụ tùng đã có lịch sử điều chỉnh tồn/giá bán thì không được xóa phiếu
-					    SELECT TOP 1 @Loi = N'Phụ tùng ' + CT.MaPhuTung + N' đã có điều chỉnh tồn hoặc giá bán, không thể xóa phiếu!'
-					    FROM dbo.ChiTietPhieuNhap CT
-					    WHERE CT.MaPhieuNhap = @MaPhieuNhap
-					      AND (EXISTS (SELECT 1 FROM dbo.DieuChinhTonKho DC WHERE DC.MaPhuTung = CT.MaPhuTung)
-					        OR EXISTS (SELECT 1 FROM dbo.DieuChinhGiaBan DG WHERE DG.MaPhuTung = CT.MaPhuTung));
+						-- 3. Số lượng tồn phải đủ để trừ
+						SELECT TOP 1 @Loi = N'Số lượng tồn của phụ tùng ' + PT.MaPhuTung + N' không đủ để trừ!'
+						FROM dbo.ChiTietPhieuNhap CT
+						JOIN dbo.PhuTung PT ON PT.MaPhuTung = CT.MaPhuTung
+						WHERE CT.MaPhieuNhap = @MaPhieuNhap
+						  AND PT.SoLuongTon < CT.SoLuongNhap;
 
-					    IF @Loi IS NOT NULL
-					        THROW 50002, @Loi, 1;
+						IF @Loi IS NOT NULL
+						    THROW 50003, @Loi, 1;
 
-					    -- 3. Số lượng tồn phải đủ để trừ
-					    SELECT TOP 1 @Loi = N'Số lượng tồn của phụ tùng ' + PT.MaPhuTung + N' không đủ để trừ!'
-					    FROM dbo.ChiTietPhieuNhap CT
-					    JOIN dbo.PhuTung PT ON PT.MaPhuTung = CT.MaPhuTung
-					    WHERE CT.MaPhieuNhap = @MaPhieuNhap
-					      AND PT.SoLuongTon < CT.SoLuongNhap;
+						-- 4. Trừ số lượng tồn
+						UPDATE PT
+						SET PT.SoLuongTon = PT.SoLuongTon - CT.SoLuongNhap
+						FROM dbo.PhuTung PT
+						JOIN dbo.ChiTietPhieuNhap CT ON CT.MaPhuTung = PT.MaPhuTung
+						WHERE CT.MaPhieuNhap = @MaPhieuNhap;
 
-					    IF @Loi IS NOT NULL
-					        THROW 50003, @Loi, 1;
+						-- 5. Xóa chi tiết và phiếu nhập (giữ lại danh sách phụ tùng để dọn ở bước 6)
+						DECLARE @PhuTung TABLE (MaPhuTung VARCHAR(10) NOT NULL PRIMARY KEY);
 
-					    -- 4. Trừ số lượng tồn
-					    UPDATE PT
-					    SET PT.SoLuongTon = PT.SoLuongTon - CT.SoLuongNhap
-					    FROM dbo.PhuTung PT
-					    JOIN dbo.ChiTietPhieuNhap CT ON CT.MaPhuTung = PT.MaPhuTung
-					    WHERE CT.MaPhieuNhap = @MaPhieuNhap;
+						INSERT INTO @PhuTung (MaPhuTung)
+						SELECT MaPhuTung
+						FROM dbo.ChiTietPhieuNhap
+						WHERE MaPhieuNhap = @MaPhieuNhap;
 
-					    -- 5. Xóa chi tiết và phiếu nhập (giữ lại danh sách phụ tùng để dọn ở bước 6)
-					    DECLARE @PhuTung TABLE (MaPhuTung VARCHAR(10) NOT NULL PRIMARY KEY);
+						DELETE FROM dbo.ChiTietPhieuNhap
+						WHERE MaPhieuNhap = @MaPhieuNhap;
 
-					    INSERT INTO @PhuTung (MaPhuTung)
-					    SELECT MaPhuTung
-					    FROM dbo.ChiTietPhieuNhap
-					    WHERE MaPhieuNhap = @MaPhieuNhap;
+						DELETE FROM dbo.PhieuNhap
+						WHERE MaPhieuNhap = @MaPhieuNhap;
 
-					    DELETE FROM dbo.ChiTietPhieuNhap
-					    WHERE MaPhieuNhap = @MaPhieuNhap;
+						-- 6. Phụ tùng không còn thuộc phiếu nhập nào thì xóa
+						DELETE PT
+						FROM dbo.PhuTung PT
+						JOIN @PhuTung X ON X.MaPhuTung = PT.MaPhuTung
+						WHERE NOT EXISTS (SELECT 1 FROM dbo.ChiTietPhieuNhap CT WHERE CT.MaPhuTung = PT.MaPhuTung);
+						""";
 
-					    DELETE FROM dbo.PhieuNhap
-					    WHERE MaPhieuNhap = @MaPhieuNhap;
-
-					    -- 6. Phụ tùng không còn thuộc phiếu nhập nào thì xóa
-					    DELETE PT
-					    FROM dbo.PhuTung PT
-					    JOIN @PhuTung X ON X.MaPhuTung = PT.MaPhuTung
-					    WHERE NOT EXISTS (SELECT 1 FROM dbo.ChiTietPhieuNhap CT WHERE CT.MaPhuTung = PT.MaPhuTung);
-
-					    COMMIT TRANSACTION;
-					END TRY
-					BEGIN CATCH
-					    IF @@TRANCOUNT > 0
-					        ROLLBACK TRANSACTION;
-
-					    THROW;
-					END CATCH;
-					""";
-
-					dtbase.ChangeData(sqlXoaPhieuNhap);
+					dtbase.ChangeDataTransaction(sqlXoaPhieuNhap);
 
 					MessageBox.Show("Xóa thành công!", "Thông báo");
 
@@ -583,6 +543,47 @@ namespace btl
 					MessageBox.Show("Lỗi khi xóa phiếu: " + ex.Message, "Thông báo");
 				}
 			}
+		}
+
+		#endregion
+
+		#region In phiếu nhập
+
+		private void btnInPhieuNhap_Click(object sender, EventArgs e)
+		{
+			if (!KiemTraChonPhieuNhap("Chọn phiếu in!"))
+			{
+				return;
+			}
+
+			string maPhieuNhap = dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString();
+
+			string sql = "SELECT pn.MaPhieuNhap, pn.NgayNhap, pn.MaNhanVienNhap, " +
+				 "ncc.TenNhaCungCap AS TenNCC, pt.MaPhuTung, pt.TenPhuTung, " +
+				 "ct.SoLuongNhap AS SoLuong, pt.DonGiaNhap, ct.ThanhTien, pt.HanSuDung " +
+				 "FROM PhieuNhap pn " +
+				 "JOIN ChiTietPhieuNhap ct ON pn.MaPhieuNhap = ct.MaPhieuNhap " +
+				 "JOIN PhuTung pt ON ct.MaPhuTung = pt.MaPhuTung " +
+				 "JOIN NhaCungCap ncc ON pt.MaNhaCungCap = ncc.MaNhaCungCap " +
+				 "WHERE pn.MaPhieuNhap = '" + maPhieuNhap + "' " +
+				 "ORDER BY ct.MaPhuTung";
+
+			dataIn = dtbase.ReadData(sql);
+
+			if (dataIn.Rows.Count == 0)
+			{
+				MessageBox.Show("Phiếu nhập không có chi tiết!", "Thông báo");
+				return;
+			}
+
+			printDocument.PrintPage -= printDocument_PrintPage;
+			printDocument.PrintPage += printDocument_PrintPage;
+
+			PrintPreviewDialog preview = new PrintPreviewDialog();
+			preview.Document = printDocument;
+			preview.Width = 1000;
+			preview.Height = 700;
+			preview.ShowDialog();
 		}
 
 		private void printDocument_PrintPage(object sender, PrintPageEventArgs e)
@@ -664,162 +665,14 @@ namespace btl
 			e.HasMorePages = false;
 		}
 
-		private void btnInPhieuNhap_Click(object sender, EventArgs e)
-		{
-			if (dgvChiTietPhieuNhap.Rows.Count == 0 || dgvPhieuNhap.CurrentRow.IsNewRow == true)
-			{
-				MessageBox.Show("Chọn phiếu in!", "Thông báo");
-				return;
-			}
+		#endregion
 
-			string maPhieuNhap = dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString();
-
-			string sql = "SELECT pn.MaPhieuNhap, pn.NgayNhap, pn.MaNhanVienNhap, " +
-				 "ncc.TenNhaCungCap AS TenNCC, pt.MaPhuTung, pt.TenPhuTung, " +
-				 "ct.SoLuongNhap AS SoLuong, pt.DonGiaNhap, ct.ThanhTien, pt.HanSuDung " +
-				 "FROM PhieuNhap pn " +
-				 "JOIN ChiTietPhieuNhap ct ON pn.MaPhieuNhap = ct.MaPhieuNhap " +
-				 "JOIN PhuTung pt ON ct.MaPhuTung = pt.MaPhuTung " +
-				 "JOIN NhaCungCap ncc ON pt.MaNhaCungCap = ncc.MaNhaCungCap " +
-				 "WHERE pn.MaPhieuNhap = '" + maPhieuNhap + "' " +
-				 "ORDER BY ct.MaPhuTung";
-
-			dataIn = dtbase.ReadData(sql);
-
-			if (dataIn.Rows.Count == 0)
-			{
-				MessageBox.Show("Phiếu nhập không có chi tiết!", "Thông báo");
-				return;
-			}
-
-			printDocument.PrintPage -= printDocument_PrintPage;
-			printDocument.PrintPage += printDocument_PrintPage;
-
-			PrintPreviewDialog preview = new PrintPreviewDialog();
-			preview.Document = printDocument;
-			preview.Width = 1000;
-			preview.Height = 700;
-			preview.ShowDialog();
-		}
-
-		private void txtTimPhieuNhap_TextChanged(object sender, EventArgs e)
-		{
-			string timPhieuNhap = txtTimPhieuNhap.Text;
-
-			string sqlTimPhieuNhap = "Select pn.MaPhieuNhap, pn.NgayNhap, Sum(ct.SoLuongNhap) As TongSoLuongNhap, Sum(ct.ThanhTien) As ThanhTien, pn.GhiChu, pn.MaNhanVienNhap " +
-				"From PhieuNhap pn Join ChiTietPhieuNhap ct On pn.MaPhieuNhap = ct.MaPhieuNhap " +
-				"Where pn.MaPhieuNhap Like '%" + timPhieuNhap + "%' " +
-				"Group By pn.MaPhieuNhap, pn.NgayNhap, pn.GhiChu, pn.MaNhanVienNhap " +
-				"Order By pn.MaPhieuNhap Asc";
-			dgvPhieuNhap.DataSource = dtbase.ReadData(sqlTimPhieuNhap);
-
-			if (dgvPhieuNhap.Rows.Count > 0)
-			{
-				string maPhieuNhap = dgvPhieuNhap.Rows[0].Cells["colMaPhieuNhap"].Value.ToString();
-
-				string sqlChiTietPhieuNhap = "Select ct.MaPhieuNhap, ct.MaPhuTung, ct.SoLuongNhap, pt.DonGiaNhap, ct.ThanhTien, pt.HanSuDung " +
-				"From PhuTung pt Join ChiTietPhieuNhap ct On pt.MaPhuTung = ct.MaPhuTung " +
-				"Where ct.MaPhieuNhap = '" + maPhieuNhap + "'";
-
-				dgvChiTietPhieuNhap.DataSource = dtbase.ReadData(sqlChiTietPhieuNhap);
-
-				CapNhatNutPhieuNhap(maPhieuNhap);
-			}
-			else
-			{
-				CapNhatNutPhieuNhap("");
-			}
-		}
-
-		// ===== Xuất Excel =====
-
-		private string ChonFileLuu(string tenFile)
-		{
-			using (SaveFileDialog dialog = new SaveFileDialog())
-			{
-				dialog.Filter = "Excel (*.xlsx)|*.xlsx";
-				// Thêm giờ phút để mỗi lần xuất ra 1 file riêng, không ghi đè lần xuất trước
-				dialog.FileName = tenFile + "_" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm") + ".xlsx";
-
-				return dialog.ShowDialog() == DialogResult.OK ? dialog.FileName : "";
-			}
-		}
-
-		// Ghi 1 bảng ra 1 sheet: tiền định dạng #,##0, ngày định dạng dd/MM/yyyy
-		private IXLWorksheet ThemSheet(XLWorkbook wb, string tenSheet, DataTable data, string[] cot, string[] tieuDe)
-		{
-			IXLWorksheet ws = wb.Worksheets.Add(tenSheet);
-
-			for (int j = 0; j < tieuDe.Length; j++)
-			{
-				ws.Cell(1, j + 1).Value = tieuDe[j];
-			}
-
-			for (int i = 0; i < data.Rows.Count; i++)
-			{
-				for (int j = 0; j < cot.Length; j++)
-				{
-					object giaTri = data.Rows[i][cot[j]];
-					IXLCell cell = ws.Cell(i + 2, j + 1);
-
-					if (giaTri is DateTime ngay)
-					{
-						cell.Value = ngay;
-						cell.Style.NumberFormat.Format = "dd/MM/yyyy";
-					}
-					else if (giaTri is decimal tien)
-					{
-						cell.Value = (double)tien;
-						cell.Style.NumberFormat.Format = "#,##0";
-					}
-					else if (giaTri is int so)
-					{
-						cell.Value = so;
-					}
-					else if (giaTri != DBNull.Value)
-					{
-						cell.Value = giaTri.ToString();
-					}
-				}
-			}
-
-			// Kẻ bảng có lọc; bảng trống vẫn giữ 1 dòng để Excel tạo được bảng
-			ws.Range(1, 1, Math.Max(data.Rows.Count, 1) + 1, cot.Length).CreateTable();
-			ws.Columns().AdjustToContents();
-
-			return ws;
-		}
-
-		// Cột và tiêu đề lấy theo lưới đang hiện, dữ liệu theo ô tìm
-		private IXLWorksheet ThemSheet(XLWorkbook wb, string tenSheet, DataGridView dgv)
-		{
-			List<DataGridViewColumn> cot = dgv.Columns.Cast<DataGridViewColumn>().Where(c => c.Visible).OrderBy(c => c.DisplayIndex).ToList();
-
-			return ThemSheet(wb, tenSheet, (DataTable)dgv.DataSource, cot.Select(c => c.DataPropertyName).ToArray(), cot.Select(c => c.HeaderText).ToArray());
-		}
-
-		private void LuuExcel(XLWorkbook wb, string duongDan)
-		{
-			try
-			{
-				wb.SaveAs(duongDan);
-
-				MessageBox.Show("Xuất file thành công!", "Thông báo");
-			}
-			catch (IOException)
-			{
-				MessageBox.Show("File đang được mở, hãy đóng file rồi thử lại!", "Thông báo");
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show("Lỗi khi xuất file: " + ex.Message, "Thông báo");
-			}
-		}
+		#region Xuất Excel
 
 		// 1 file gồm 3 sheet: phụ tùng, lịch sử điều chỉnh tồn (kèm dòng tổng), lịch sử điều chỉnh giá bán
 		private void btnXuatExcelPhuTung_Click(object sender, EventArgs e)
 		{
-			string duongDan = ChonFileLuu("PhuTung");
+			string duongDan = Classes.XuatExcel.ChonFileLuu("PhuTung");
 
 			if (duongDan == "")
 			{
@@ -828,10 +681,10 @@ namespace btl
 
 			using (XLWorkbook wb = new XLWorkbook())
 			{
-				ThemSheet(wb, "Phụ tùng", dgvPhuTung);
+				Classes.XuatExcel.ThemSheet(wb, "Phụ tùng", dgvPhuTung);
 
 				DataTable dataTonKho = (DataTable)dgvDieuChinhTonKho.DataSource;
-				IXLWorksheet wsTonKho = ThemSheet(wb, "Điều chỉnh tồn", dgvDieuChinhTonKho);
+				IXLWorksheet wsTonKho = Classes.XuatExcel.ThemSheet(wb, "Điều chỉnh tồn", dgvDieuChinhTonKho);
 
 				// Dòng tổng nằm dưới bảng, số tiền thẳng cột "Tiền lệch"
 				TinhTongTienLech(dataTonKho, out decimal tongThua, out decimal tongThieu);
@@ -849,16 +702,16 @@ namespace btl
 				}
 				wsTonKho.Columns().AdjustToContents();
 
-				ThemSheet(wb, "Điều chỉnh giá bán", dgvDieuChinhGiaBan);
+				Classes.XuatExcel.ThemSheet(wb, "Điều chỉnh giá bán", dgvDieuChinhGiaBan);
 
-				LuuExcel(wb, duongDan);
+				Classes.XuatExcel.Luu(wb, duongDan);
 			}
 		}
 
 		// 1 file gồm 2 sheet: phiếu nhập và chi tiết của các phiếu đang hiện trên lưới
 		private void btnXuatExcelPhieuNhap_Click(object sender, EventArgs e)
 		{
-			string duongDan = ChonFileLuu("PhieuNhap");
+			string duongDan = Classes.XuatExcel.ChonFileLuu("PhieuNhap");
 
 			if (duongDan == "")
 			{
@@ -876,22 +729,16 @@ namespace btl
 
 			using (XLWorkbook wb = new XLWorkbook())
 			{
-				ThemSheet(wb, "Phiếu nhập", dgvPhieuNhap);
+				Classes.XuatExcel.ThemSheet(wb, "Phiếu nhập", dgvPhieuNhap);
 
-				ThemSheet(wb, "Chi tiết phiếu nhập", dtbase.ReadData(sqlChiTiet),
+				Classes.XuatExcel.ThemSheet(wb, "Chi tiết phiếu nhập", dtbase.ReadData(sqlChiTiet),
 					new string[] { "MaPhieuNhap", "MaPhuTung", "TenPhuTung", "TenNhaCungCap", "SoLuongNhap", "DonGiaNhap", "ThanhTien", "HanSuDung" },
 					new string[] { "Mã phiếu nhập", "Mã phụ tùng", "Tên phụ tùng", "Nhà cung cấp", "Số lượng nhập", "Đơn giá nhập", "Thành tiền", "Hạn sử dụng" });
 
-				LuuExcel(wb, duongDan);
+				Classes.XuatExcel.Luu(wb, duongDan);
 			}
 		}
 
-		private void btnThoat_Click(object sender, EventArgs e)
-		{
-			if (MessageBox.Show("Chắc chắn muốn thoát?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-			{
-				this.Close();
-			}
-		}
+		#endregion
 	}
 }
