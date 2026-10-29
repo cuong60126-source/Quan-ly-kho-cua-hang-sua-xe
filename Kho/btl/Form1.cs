@@ -122,6 +122,13 @@ namespace btl
 				return;
 			}
 
+			// Nhà cung cấp đã có phụ tùng thì database không cho xóa (khóa ngoại PhuTung -> NhaCungCap)
+			if (dtbase.KiemTraTonTai("PhuTung", "MaNhaCungCap", cbNhaCungCap.SelectedValue.ToString()))
+			{
+				MessageBox.Show("Nhà cung cấp đang có phụ tùng, không thể xóa!", "Thông báo");
+				return;
+			}
+
 			if (MessageBox.Show("Chắc chắn muốn xóa?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
 			{
 				string tenNCC = cbNhaCungCap.SelectedValue.ToString();
@@ -273,55 +280,72 @@ namespace btl
 
 		#region Phụ tùng trên lưới
 
-		private void btnThemPhuTung_Click(object sender, EventArgs e)
+		// Kiểm tra các ô nhập trước khi đưa phụ tùng lên lưới, dùng chung cho Thêm và Sửa; hanhDong là "thêm" hoặc "sửa"
+		private bool KiemTraNhapPhuTung(string hanhDong)
 		{
+			// Khi sửa thì dòng đang sửa không tính là trùng mã với chính nó
+			int dongDangSua = hanhDong == "sửa" ? selectedRowIndex : -1;
+
 			if (cbMaPhuTung.Text.Trim() == "" || txtTenPhuTung.Text.Trim() == "" || txtSoLuongNhap.Text.Trim() == "" || txtDonGiaNhap.Text.Trim() == "" || txtDonGiaBan.Text.Trim() == "" || txtMaPhieuNhap.Text.Trim() == "" || txtMaNVNhap.Text.Trim() == "" || cbNhaCungCap.SelectedValue == null)
 			{
 				MessageBox.Show("Không được để trống!", "Thông báo");
-				return;
+				return false;
 			}
 
-			if(Convert.ToDecimal(txtDonGiaBan.Text) <= 0)
+			// NumberOnly chỉ chặn lúc gõ phím, dán (Ctrl+V) vẫn đưa được chữ vào ô số; số quá lớn cũng không đọc được
+			if (!decimal.TryParse(txtDonGiaBan.Text, out decimal donGiaBan) || donGiaBan <= 0)
 			{
 				MessageBox.Show("Giá bán không hợp lệ!", "Thông báo");
-				return;
+				return false;
 			}
 
-			if (dtpHanSuDung.Value.Date < DateTime.Today)
+			// Phiếu cũ có thể có phụ tùng đã quá hạn: sửa dòng đó mà giữ nguyên hạn sử dụng thì không chặn
+			bool doiHanSuDung = dongDangSua == -1 || Convert.ToDateTime(dgvPhuTung.Rows[dongDangSua].Cells["colHanSuDung"].Value).Date != dtpHanSuDung.Value.Date;
+			if (doiHanSuDung && dtpHanSuDung.Value.Date < DateTime.Today)
 			{
 				MessageBox.Show("Giá trị hạn sử dụng không hợp lệ", "Thông báo");
 				dtpHanSuDung.Focus();
-				return;
+				return false;
 			}
 
-			if (Convert.ToInt32(txtSoLuongNhap.Text) <= 0 || Double.Parse(txtDonGiaNhap.Text) <= 0)
+			if (!int.TryParse(txtSoLuongNhap.Text, out int soLuongNhap) || !decimal.TryParse(txtDonGiaNhap.Text, out decimal donGiaNhap) || soLuongNhap <= 0 || donGiaNhap <= 0)
 			{
 				MessageBox.Show("Giá trị số lượng hoặc đơn giá nhập không hợp lệ!", "Thông báo");
-				return;
+				return false;
 			}
 
 			// Mỗi mã phụ tùng chỉ được có 1 dòng trong phiếu (khóa chính MaPhieuNhap + MaPhuTung)
 			foreach (DataGridViewRow row in dgvPhuTung.Rows)
 			{
-				if ((row.Cells["colMaPhuTung"].Value?.ToString() ?? "").Trim() == cbMaPhuTung.Text.Trim())
+				if (row.Index != dongDangSua && (row.Cells["colMaPhuTung"].Value?.ToString() ?? "").Trim() == cbMaPhuTung.Text.Trim())
 				{
 					MessageBox.Show("Phụ tùng đã có trong phiếu, hãy sửa số lượng!", "Thông báo");
-					return;
+					return false;
 				}
 			}
 
 			if (!KiemTraThongTinPhuTung())
 			{
-				return;
+				return false;
 			}
 
 			// Giá thị trường giảm thì được bán thấp hơn giá nhập, chỉ cảnh báo để tránh gõ nhầm
-			if (Convert.ToDecimal(txtDonGiaBan.Text) < Convert.ToDecimal(txtDonGiaNhap.Text))
+			if (donGiaBan < donGiaNhap)
 			{
-				if (MessageBox.Show("Giá bán thấp hơn đơn giá nhập. Vẫn thêm?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
+				if (MessageBox.Show("Giá bán thấp hơn đơn giá nhập. Vẫn " + hanhDong + "?", "Thông báo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
 				{
-					return;
+					return false;
 				}
+			}
+
+			return true;
+		}
+
+		private void btnThemPhuTung_Click(object sender, EventArgs e)
+		{
+			if (!KiemTraNhapPhuTung("thêm"))
+			{
+				return;
 			}
 
 			dgvPhuTung.Rows.Add(
@@ -346,7 +370,8 @@ namespace btl
 
 		private void dgvPhuTung_CellClick(object sender, DataGridViewCellEventArgs e)
 		{
-			if (e.RowIndex < 0)
+			// Dòng trống cuối lưới (dòng để thêm mới) chưa có dữ liệu
+			if (e.RowIndex < 0 || dgvPhuTung.Rows[e.RowIndex].IsNewRow)
 			{
 				return;
 			}
@@ -379,7 +404,7 @@ namespace btl
 				return;
 			}
 
-			if (!KiemTraThongTinPhuTung())
+			if (!KiemTraNhapPhuTung("sửa"))
 			{
 				return;
 			}

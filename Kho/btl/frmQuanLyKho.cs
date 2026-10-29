@@ -16,6 +16,8 @@ namespace btl
 		Classes.Function function = new Classes.Function();
 		private PrintDocument printDocument = new PrintDocument();
 		private DataTable dataIn;
+		private int dongDangIn;    // dòng chi tiết sẽ in tiếp, dùng khi phiếu dài phải in nhiều trang
+		private int trangDangIn;
 
 		#region Khởi tạo
 
@@ -226,7 +228,13 @@ namespace btl
 			string maPhuTung = dgvPhuTung.CurrentRow.Cells["colMaPhuTung"].Value.ToString();
 			decimal donGiaNhap = Convert.ToDecimal(dgvPhuTung.CurrentRow.Cells["colDonGiaNhap"].Value);
 			decimal donGiaBan = Convert.ToDecimal(dgvPhuTung.CurrentRow.Cells["colDonGiaBan"].Value);
-			decimal donGiaBanMoi = Convert.ToDecimal(txtDonGiaBanMoi.Text);
+
+			// NumberOnly chỉ chặn lúc gõ phím, dán (Ctrl+V) vẫn đưa được chữ vào ô giá
+			if (!decimal.TryParse(txtDonGiaBanMoi.Text, out decimal donGiaBanMoi))
+			{
+				MessageBox.Show("Giá bán không hợp lệ!", "Thông báo");
+				return;
+			}
 
 			if (donGiaBanMoi == donGiaBan)
 			{
@@ -360,6 +368,8 @@ namespace btl
 			}
 			else
 			{
+				// Không có phiếu nào thì xóa luôn chi tiết của phiếu đang hiện trước đó
+				dgvChiTietPhieuNhap.DataSource = null;
 				CapNhatNutPhieuNhap("");
 			}
 		}
@@ -382,6 +392,11 @@ namespace btl
 
 		private void dgvPhieuNhap_CellClick(object sender, DataGridViewCellEventArgs e)
 		{
+			if (e.RowIndex < 0)
+			{
+				return;
+			}
+
 			LoadChiTietPhieuNhap(dgvPhieuNhap.CurrentRow.Cells["colMaPhieuNhap"].Value.ToString());
 		}
 
@@ -576,6 +591,8 @@ namespace btl
 				return;
 			}
 
+			printDocument.BeginPrint -= printDocument_BeginPrint;
+			printDocument.BeginPrint += printDocument_BeginPrint;
 			printDocument.PrintPage -= printDocument_PrintPage;
 			printDocument.PrintPage += printDocument_PrintPage;
 
@@ -586,82 +603,128 @@ namespace btl
 			preview.ShowDialog();
 		}
 
+		// Mỗi lần bắt đầu in (xem trước hoặc in thật) thì in lại từ dòng đầu, trang 1
+		private void printDocument_BeginPrint(object sender, PrintEventArgs e)
+		{
+			dongDangIn = 0;
+			trangDangIn = 1;
+		}
+
 		private void printDocument_PrintPage(object sender, PrintPageEventArgs e)
 		{
 			Graphics g = e.Graphics;
 
 			Font fontTitle = new Font("Arial", 18, FontStyle.Bold);
-			Font fontHeader = new Font("Arial", 11, FontStyle.Bold);
+			Font fontHeader = new Font("Arial", 10, FontStyle.Bold);
 			Font font = new Font("Arial", 10);
 
-			float x = 50, y = 50;
-			float lineHeight = 30;
+			// Vùng in nằm trong lề trang (đơn vị 1/100 inch), bảng giãn theo bề ngang trang
+			float x = e.MarginBounds.Left, y = e.MarginBounds.Top;
+			float rongTrang = e.MarginBounds.Width;
+			float cuoiTrang = e.MarginBounds.Bottom;
+			float lineHeight = font.GetHeight(g) + 12;
 
-			string maPhieu = dataIn.Rows[0]["MaPhieuNhap"].ToString();
-			string nguoiNhap = dataIn.Rows[0]["MaNhanVienNhap"].ToString();
-			DateTime ngayNhap = Convert.ToDateTime(dataIn.Rows[0]["NgayNhap"]);
+			StringFormat canGiua = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+			StringFormat canTrai = new StringFormat { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center };
+			StringFormat canPhai = new StringFormat { Alignment = StringAlignment.Far, LineAlignment = StringAlignment.Center };
 
-			g.DrawString("Phiếu Nhập Kho", fontTitle, Brushes.Black, x + 200, y);
-			y += 50;
-
-			g.DrawString("Mã phiếu: " + maPhieu, font, Brushes.Black, x, y);
-			y += lineHeight;
-
-			g.DrawString("Ngày nhập: " + ngayNhap.ToString("dd/MM/yyyy"), font, Brushes.Black, x, y);
-			y += lineHeight;
-
-			g.DrawString("Người nhập: " + nguoiNhap, font, Brushes.Black, x, y);
-			y += lineHeight;
-
-			g.DrawString("Nhà cung cấp:", fontHeader, Brushes.Black, x, y);
-			y += lineHeight;
-
-			var nhaCungCap = dataIn.AsEnumerable().Select(r => r["TenNCC"].ToString()).Distinct();
-			foreach (string tenNCC in nhaCungCap)
+			void VeSoTrang()
 			{
-				g.DrawString("- " + tenNCC, font, Brushes.Black, x, y);
-				y += lineHeight;
+				g.DrawString("Trang " + trangDangIn, font, Brushes.Gray, new RectangleF(x, cuoiTrang + 10, rongTrang, lineHeight), canGiua);
 			}
 
-			y += 10;
+			// Tiêu đề và thông tin chung chỉ in ở trang đầu
+			if (dongDangIn == 0)
+			{
+				string maPhieu = dataIn.Rows[0]["MaPhieuNhap"].ToString();
+				string nguoiNhap = dataIn.Rows[0]["MaNhanVienNhap"].ToString();
+				DateTime ngayNhap = Convert.ToDateTime(dataIn.Rows[0]["NgayNhap"]);
 
-			float[] widths = { 45, 100, 200, 65, 90, 100 };
+				g.DrawString("PHIẾU NHẬP KHO", fontTitle, Brushes.Black, new RectangleF(x, y, rongTrang, 40), canGiua);
+				y += 55;
+
+				g.DrawString("Mã phiếu: " + maPhieu, font, Brushes.Black, new RectangleF(x, y, rongTrang / 2, lineHeight), canTrai);
+				g.DrawString("Ngày nhập: " + ngayNhap.ToString("dd/MM/yyyy"), font, Brushes.Black, new RectangleF(x + rongTrang / 2, y, rongTrang / 2, lineHeight), canPhai);
+				y += lineHeight;
+
+				g.DrawString("Người nhập: " + nguoiNhap, font, Brushes.Black, new RectangleF(x, y, rongTrang, lineHeight), canTrai);
+				y += lineHeight;
+
+				g.DrawString("Nhà cung cấp:", fontHeader, Brushes.Black, new RectangleF(x, y, rongTrang, lineHeight), canTrai);
+				y += lineHeight;
+
+				// Tên nhà cung cấp dài thì tự xuống dòng trong bề ngang trang
+				var nhaCungCap = dataIn.AsEnumerable().Select(r => r["TenNCC"].ToString()).Distinct();
+				foreach (string tenNCC in nhaCungCap)
+				{
+					float caoNCC = g.MeasureString("- " + tenNCC, font, (int)rongTrang).Height;
+					g.DrawString("- " + tenNCC, font, Brushes.Black, new RectangleF(x, y, rongTrang, caoNCC));
+					y += caoNCC + 6;
+				}
+
+				y += 14;
+			}
+
+			// Độ rộng cột theo tỉ lệ bề ngang trang; cột Tên PT rộng nhất. Số tiền căn phải, STT và SL căn giữa
+			float[] tiLe = { 0.06f, 0.13f, 0.39f, 0.08f, 0.16f, 0.18f };
 			string[] headers = { "STT", "Mã PT", "Tên PT", "SL", "Đơn giá", "Thành tiền" };
+			StringFormat[] canCot = { canGiua, canGiua, canTrai, canGiua, canPhai, canPhai };
+			float[] widths = tiLe.Select(t => rongTrang * t).ToArray();
 
+			// Dòng tiêu đề bảng in lại ở đầu mỗi trang
 			float tableX = x;
-
 			for (int i = 0; i < headers.Length; i++)
 			{
+				g.FillRectangle(Brushes.Gainsboro, tableX, y, widths[i], lineHeight);
 				g.DrawRectangle(Pens.Black, tableX, y, widths[i], lineHeight);
-				g.DrawString(headers[i], fontHeader, Brushes.Black, new RectangleF(tableX + 3, y + 5, widths[i] - 6, lineHeight));
+				g.DrawString(headers[i], fontHeader, Brushes.Black, new RectangleF(tableX, y, widths[i], lineHeight), canGiua);
 				tableX += widths[i];
 			}
-
 			y += lineHeight;
-			decimal tongTien = 0;
 
-			for (int i = 0; i < dataIn.Rows.Count; i++)
+			bool daInDong = false;
+			while (dongDangIn < dataIn.Rows.Count)
 			{
-				DataRow row = dataIn.Rows[i];
-				tableX = x;
+				DataRow row = dataIn.Rows[dongDangIn];
 
-				string[] values = { (i + 1).ToString(), row["MaPhuTung"].ToString(), row["TenPhuTung"].ToString(), row["SoLuong"].ToString(), Convert.ToDecimal(row["DonGiaNhap"]).ToString(), Convert.ToDecimal(row["ThanhTien"]).ToString() };
+				string[] values = { (dongDangIn + 1).ToString(), row["MaPhuTung"].ToString(), row["TenPhuTung"].ToString(), row["SoLuong"].ToString(), Convert.ToDecimal(row["DonGiaNhap"]).ToString("N0"), Convert.ToDecimal(row["ThanhTien"]).ToString("N0") };
 
+				// Chiều cao dòng theo ô cao nhất: chữ dài tự xuống dòng trong ô, không đè lên ô khác
+				float rowHeight = lineHeight;
 				for (int j = 0; j < values.Length; j++)
 				{
-					g.DrawRectangle(Pens.Black, tableX, y, widths[j], lineHeight);
-					g.DrawString(values[j], font, Brushes.Black, new RectangleF(tableX + 3, y + 5, widths[j] - 6, lineHeight));
+					rowHeight = Math.Max(rowHeight, g.MeasureString(values[j], font, (int)(widths[j] - 10)).Height + 12);
+				}
+
+				// Hết chỗ thì sang trang mới; dòng cuối phải chừa chỗ cho dòng tổng tiền
+				bool dongCuoi = dongDangIn == dataIn.Rows.Count - 1;
+				if (daInDong && y + rowHeight + (dongCuoi ? lineHeight * 2 : 0) > cuoiTrang)
+				{
+					VeSoTrang();
+					trangDangIn++;
+					e.HasMorePages = true;
+					return;
+				}
+
+				tableX = x;
+				for (int j = 0; j < values.Length; j++)
+				{
+					g.DrawRectangle(Pens.Black, tableX, y, widths[j], rowHeight);
+					g.DrawString(values[j], font, Brushes.Black, new RectangleF(tableX + 5, y, widths[j] - 10, rowHeight), canCot[j]);
 					tableX += widths[j];
 				}
 
-				tongTien += Convert.ToDecimal(row["ThanhTien"]);
-				y += lineHeight;
+				y += rowHeight;
+				dongDangIn++;
+				daInDong = true;
 			}
 
-			y += 20;
+			decimal tongTien = dataIn.AsEnumerable().Sum(r => Convert.ToDecimal(r["ThanhTien"]));
 
-			g.DrawString("Tổng tiền: " + tongTien.ToString("N0") + " VNĐ", fontHeader, Brushes.Black, x, y);
+			y += 15;
+			g.DrawString("Tổng tiền: " + tongTien.ToString("N0") + " VNĐ", fontHeader, Brushes.Black, new RectangleF(x, y, rongTrang, lineHeight), canPhai);
 
+			VeSoTrang();
 			e.HasMorePages = false;
 		}
 

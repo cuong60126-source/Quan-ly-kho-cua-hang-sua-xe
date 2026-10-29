@@ -39,7 +39,8 @@ namespace btl
 				return;
 			}
 
-			string sql = "Insert Into NhaCungCap Values ('" + txtMaNCC.Text + "', N'" + txtTenNCC.Text + "', '" + txtSDT.Text + "', N'" + txtDiaChi.Text + "')";
+			// Escape dấu ' để tên/địa chỉ có dấu nháy (VD: O'Brien) không làm hỏng câu SQL
+			string sql = "Insert Into NhaCungCap Values ('" + function.EscapeSql(txtMaNCC.Text) + "', N'" + function.EscapeSql(txtTenNCC.Text) + "', '" + function.EscapeSql(txtSDT.Text) + "', N'" + function.EscapeSql(txtDiaChi.Text) + "')";
 			dtbase.ChangeData(sql);
 
 			MessageBox.Show("Thêm thành công!", "Thông báo");
